@@ -1,0 +1,11 @@
+<div class="place-detail">
+  <h1>{{ place.name }}</h1>
+  <img *ngIf="place.imageUrl" [src]="place.imageUrl" alt="{{ place.name }}" />
+  <div class="place-info">
+    <p><strong>Category:</strong> {{ place.category }}</p>
+    <p><strong>Location:</strong> {{ place.county }} - {{ place.district }}</p>
+    <p><strong>Description:</strong> {{ place.description }}</p>
+    <p *ngIf="place.address"><strong>Address:</strong> {{ place.address }}</p>
+    <a *ngIf="place.websiteUrl" [href]="place.websiteUrl" target="_blank">View More Details</a>
+  </div>
+</div>

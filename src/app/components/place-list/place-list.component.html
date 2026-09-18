@@ -1,0 +1,17 @@
+<aside class="place-list" aria-label="景點清單">
+  <div class="place-list__header">
+    <div><p>CURATED PICKS</p><h2>{{ selectedCategory === 'ALL' ? '推薦地點' : '篩選結果' }}</h2></div>
+    <span>{{ places.length }}</span>
+  </div>
+
+  <p class="place-list__empty" *ngIf="places.length === 0">目前沒有符合的地點</p>
+
+  <article class="place-list__item" *ngFor="let place of places">
+    <span class="place-list__emoji" aria-hidden="true">{{ place.category === 'FOOD' ? '🍜' : place.category === 'ATTRACTION' ? '🏞' : place.category === 'NATURE' ? '🌲' : place.category === 'CULTURE' ? '🏛' : place.category === 'CAFE' ? '☕' : '🏨' }}</span>
+    <div>
+      <h3>{{ place.name }}</h3>
+      <p>{{ place.county }} {{ place.district }}</p>
+    </div>
+    <span class="place-list__tag">{{ place.category }}</span>
+  </article>
+</aside>

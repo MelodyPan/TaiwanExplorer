@@ -1,0 +1,58 @@
+:host {
+	display: block;
+	height: 100%;
+}
+
+:host > div {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 16px;
+	gap: 14px;
+}
+
+.main-content {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	gap: 14px;
+}
+
+app-sidebar {
+	flex: 0 0 220px;
+	overflow-y: auto;
+}
+
+app-taiwan-map {
+	flex: 1 1 55%;
+	min-width: 0;
+	overflow: hidden;
+	border: 1px solid #c9e8f8;
+	border-radius: 8px;
+	box-shadow: 0 12px 28px rgba(58, 130, 167, 0.14);
+}
+
+app-place-list {
+	flex: 0 0 320px;
+}
+
+@media (max-width: 900px) {
+	:host > div {
+		height: auto;
+		min-height: 100%;
+		padding: 10px;
+	}
+
+	.main-content {
+		flex-direction: column;
+	}
+
+	app-sidebar, app-place-list {
+		flex: auto;
+	}
+
+	app-taiwan-map {
+		flex: none;
+		height: 55vh;
+	}
+}

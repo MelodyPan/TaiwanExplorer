@@ -1,0 +1,13 @@
+<div class="sidebar">
+  <p class="sidebar__eyebrow">EXPLORE BY MOOD</p>
+  <h2>想去哪裡玩？</h2>
+  <ul>
+    <li><button type="button" [class.active]="selectedCategory === 'ALL'" (click)="filterByCategory('ALL')"><span>✦</span>全部</button></li>
+    <li><button type="button" [class.active]="selectedCategory === 'ATTRACTION'" (click)="filterByCategory('ATTRACTION')"><span>🏞</span>景點</button></li>
+    <li><button type="button" [class.active]="selectedCategory === 'FOOD'" (click)="filterByCategory('FOOD')"><span>🍜</span>美食</button></li>
+    <li><button type="button" [class.active]="selectedCategory === 'CAFE'" (click)="filterByCategory('CAFE')"><span>☕</span>咖啡</button></li>
+    <li><button type="button" [class.active]="selectedCategory === 'HOTEL'" (click)="filterByCategory('HOTEL')"><span>🏨</span>住宿</button></li>
+    <li><button type="button" [class.active]="selectedCategory === 'CULTURE'" (click)="filterByCategory('CULTURE')"><span>🏛</span>文化</button></li>
+    <li><button type="button" [class.active]="selectedCategory === 'NATURE'" (click)="filterByCategory('NATURE')"><span>🌲</span>自然</button></li>
+  </ul>
+</div>

@@ -1,0 +1,10 @@
+<div class="place-popup">
+  <div class="popup-content">
+    <img [src]="place.imageUrl" alt="{{ place.name }}" class="popup-image" />
+    <h2>{{ place.name }}</h2>
+    <p class="category">{{ place.category }}</p>
+    <p class="location">{{ place.county }} {{ place.district ? ' - ' + place.district : '' }}</p>
+    <p class="description">{{ place.description }}</p>
+    <a [href]="place.websiteUrl" target="_blank" class="details-link">查看詳細資訊 →</a>
+  </div>
+</div>

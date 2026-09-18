@@ -1,0 +1,21 @@
+<div class="header">
+    <div class="logo">
+        <span class="logo__mark" aria-hidden="true">TW</span>
+        <div>
+            <p>TAIWAN EXPLORER</p>
+            <h1>探索台灣</h1>
+        </div>
+    </div>
+    <div class="search">
+        <span aria-hidden="true">⌕</span>
+        <input type="search" placeholder="搜尋景點、美食或地區" aria-label="搜尋景點、美食或地區" (input)="searchPlaces($event)" />
+    </div>
+    <div class="weather" *ngIf="weather" aria-live="polite">
+        <span class="weather__icon" aria-hidden="true">{{ weatherIcon }}</span>
+        <span class="weather__condition">{{ weather.summary }}</span>
+        <span>{{ weather.county }}</span>
+        <strong>{{ weather.low }}-{{ weather.high }}°C</strong>
+        <span>降雨 {{ weather.rainProbability }}%</span>
+        <span class="weather__date">今天 {{ today }}</span>
+    </div>
+</div>

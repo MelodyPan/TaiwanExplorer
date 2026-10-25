@@ -12,6 +12,7 @@ import { PlaceService } from '../../core/services/place.service';
 export class PlaceListComponent implements OnInit {
   places: Place[] = [];
   selectedCategory = 'ALL';
+  selectedCounties: readonly string[] = [];
 
   constructor(
     private placeService: PlaceService,
@@ -22,13 +23,17 @@ export class PlaceListComponent implements OnInit {
     combineLatest([
       this.placeService.getPlaces(),
       this.placeMarkerService.categoryFilter$,
-      this.placeMarkerService.searchFilter$
-    ]).subscribe(([places, category, searchTerm]) => {
+      this.placeMarkerService.searchFilter$,
+      this.placeMarkerService.countyFilter$
+    ]).subscribe(([places, category, searchTerm, counties]) => {
+      this.selectedCounties = counties;
       this.selectedCategory = category;
       const categoryPlaces = category === 'ALL'
         ? places
         : places.filter(place => place.category === category);
-      this.places = categoryPlaces.filter(place => this.matchesSearch(place, searchTerm));
+      this.places = categoryPlaces
+        .filter(place => counties.length === 0 || counties.includes(place.county))
+        .filter(place => this.matchesSearch(place, searchTerm));
     });
   }
 

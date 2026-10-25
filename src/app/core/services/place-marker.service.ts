@@ -12,6 +12,9 @@ export class PlaceMarkerService {
   private map?: L.Map;
   private selectedCategory = 'ALL';
   private searchTerm = '';
+  private selectedCounties: string[] = [];
+  private readonly countyFilterSubject = new BehaviorSubject<readonly string[]>([]);
+  readonly countyFilter$ = this.countyFilterSubject.asObservable();
   private readonly categoryFilterSubject = new BehaviorSubject<string>('ALL');
   private readonly searchFilterSubject = new BehaviorSubject<string>('');
   readonly categoryFilter$ = this.categoryFilterSubject.asObservable();
@@ -51,6 +54,14 @@ export class PlaceMarkerService {
     }
   }
 
+  setCountyFilter(counties: readonly string[]): void {
+    this.selectedCounties = [...counties];
+    this.countyFilterSubject.next([...this.selectedCounties]);
+    if (this.map) {
+      this.loadMarkers(this.map, true);
+    }
+  }
+
   setSearchFilter(searchTerm: string): void {
     this.searchTerm = searchTerm.trim().toLocaleLowerCase();
     this.searchFilterSubject.next(this.searchTerm);
@@ -71,6 +82,7 @@ export class PlaceMarkerService {
       const bounds = map.getBounds();
       this.markers = places
         .filter(place => this.selectedCategory === 'ALL' || place.category === this.selectedCategory)
+        .filter(place => this.selectedCounties.length === 0 || this.selectedCounties.includes(place.county))
         .filter(place => this.matchesSearch(place))
         .filter(place => bounds.contains([place.latitude, place.longitude]))
         .map(place => this.createMarker(place).addTo(map));

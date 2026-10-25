@@ -10,6 +10,10 @@ TaiwanExplorer is an interactive geographic exploration platform designed to pro
 - Leaflet
 - GeoJSON
 
+## Rendering and Hosting
+The application uses client-side rendering (CSR). Its browser entry point is `src/main.ts`, which bootstraps `AppModule`. Server-side rendering (SSR) and prerendering are not configured, and no Node.js server is required for hosting the built site.
+
+Run `npm run build` to generate the static site in `dist/TaiwanExplorer`. Publish that directory to a static host such as GitHub Pages. Node.js is only needed for local development and build tooling.
 ## Project Structure
 ```
 src/

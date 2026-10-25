@@ -10,4 +10,21 @@
     <li><button type="button" [class.active]="selectedCategory === 'CULTURE'" (click)="filterByCategory('CULTURE')"><span>🏛</span>文化</button></li>
     <li><button type="button" [class.active]="selectedCategory === 'NATURE'" (click)="filterByCategory('NATURE')"><span>🌲</span>自然</button></li>
   </ul>
+
+  <details class="county-filter">
+    <summary>縣市篩選 <span class="county-filter__hint">可複選</span></summary>
+    <fieldset>
+      <legend class="county-filter__legend">選擇想探索的縣市</legend>
+      <div class="county-filter__options">
+        <label *ngFor="let county of counties" [class.is-selected]="selectedCounties.includes(county)">
+          <input type="checkbox" [checked]="selectedCounties.includes(county)" (change)="toggleCounty(county)">
+          {{ county }}
+        </label>
+      </div>
+    </fieldset>
+  </details>
+  <div class="county-filter__status">
+    <p aria-live="polite">{{ selectedCounties.length === 0 ? '全部縣市' : '已選 ' + selectedCounties.length + ' 個縣市' }}</p>
+    <button class="county-filter__clear" type="button" *ngIf="selectedCounties.length > 0" (click)="clearCounties()">清除選取</button>
+  </div>
 </div>

@@ -1,7 +1,13 @@
 :host {
-  display: block;
-  position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+}
+
+.map-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
 #map { height: 100%; width: 100%; }
@@ -40,13 +46,14 @@
 }
 
 .location-status {
-  max-width: 240px;
+  display: flex;
+  align-items: center;
+  flex: 0 0 50px;
   margin: 0;
-  padding: 6px 9px;
+  padding: 6px 12px;
   color: #41637a;
-  background: rgba(249, 253, 255, 0.96);
-  border: 1px solid #c9e8f8;
-  border-radius: 6px;
+  background: #f9fdff;
+  border-top: 1px solid #c9e8f8;
   font-size: 12px;
   line-height: 1.5;
 

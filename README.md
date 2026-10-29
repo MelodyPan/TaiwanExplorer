@@ -117,3 +117,14 @@ The database will include comprehensive details about places, including attribut
 - Travel Route
 - Nearby Places
 - Recommendation
+## Personal Place Records
+
+Connect Google Drive, create the private records dataset once, then open “我的地點紀錄／編輯” from a place popup or list. Save 1–5 stars (or unrated), visited, parking, seasonal status and an optional seasonal explanation. Unknown values remain unset. Only the connected account sees its personal records; the public map works without login.
+
+This adapts Home bookmarks' Drive/session/login engines (source: ../Home/apps/bookmarks/Javascript, snapshot 2026-10-29). Angular remains CSR; there is no storage server. Records use purpose melody-taiwan-records-v1, a separate private TaiwanExplorer folder and place-records-YYYY-MM-DD.json files in Taiwan time. Bookmarks files are never read or written. Same-day updates use conditional writes; new days preserve earlier files. Conflicts require an explicit version choice.
+
+The public OAuth Client ID in src/assets/records/config.js matches Home bookmarks. Enable Drive API and authorize https://melodypan.github.io as a JavaScript origin in that existing Google project. Local testing requires adding the actual localhost origin (including port). No Client Secret belongs in the site. Scope is drive.file; tokens stay in this tab's sessionStorage under a separate key and expire according to Google's expires_in. Personal records and unsaved drafts stay in memory, not localStorage.
+
+Use “下載備份” before leaving if synchronization fails. Closing and reopening the editor retains its draft within the current tab. Reloading or closing the tab loses unsubmitted edits; the site warns before leaving. Reconnect the same account after expiration. “重新同步” refreshes cloud data; if the open form is stale, save is blocked until you explicitly reload that place.
+
+Run node --test tests/*.test.cjs and npm run build -- --base-href /TaiwanExplorer/. Mocked tests cover schema validation, Drive versioning, uncertain responses, authorization expiry, account changes, and stale editor writes. Real Google authorization and iPhone popup recovery must also be accepted on an actual account; mocked tests cannot prove Google project policy or device behavior.

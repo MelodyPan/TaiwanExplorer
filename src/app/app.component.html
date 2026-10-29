@@ -1,7 +1,8 @@
 <div>
-  <app-header></app-header>
+  <app-header [filtersOpen]="filtersOpen" (filtersToggle)="filtersOpen = !filtersOpen"></app-header>
+  <app-place-records></app-place-records>
   <div class="main-content">
-    <app-sidebar></app-sidebar>
+    <app-sidebar id="explore-filters" [hidden]="!filtersOpen"></app-sidebar>
     <app-taiwan-map></app-taiwan-map>
     <app-place-list></app-place-list>
   </div>

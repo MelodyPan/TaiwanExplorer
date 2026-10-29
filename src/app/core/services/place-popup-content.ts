@@ -42,5 +42,5 @@ export function createPlacePopupContent(place: Place): string {
     + '<div class="place-info__links">'
     + '<a href="' + escapeHtml(directions) + '" target="_blank" rel="noopener noreferrer">Google 地圖 ↗</a>'
     + (website ? '<a href="' + escapeHtml(website) + '" target="_blank" rel="noopener noreferrer">官方網站 ↗</a>' : '')
-    + '</div></article>';
+    + '</div><button type="button" class="place-info__record">我的地點紀錄／編輯</button></article>';
 }

@@ -1,3 +1,4 @@
+import { PlaceRecordsService } from '../../core/services/place-records.service';
 import { Component, OnInit } from '@angular/core';
 import { combineLatest } from 'rxjs';
 import { Place, PlaceCategory } from '../../models/place.model';
@@ -16,7 +17,8 @@ export class PlaceListComponent implements OnInit {
 
   constructor(
     private placeService: PlaceService,
-    private placeMarkerService: PlaceMarkerService
+    private placeMarkerService: PlaceMarkerService,
+    public records: PlaceRecordsService
   ) {}
 
   ngOnInit(): void {

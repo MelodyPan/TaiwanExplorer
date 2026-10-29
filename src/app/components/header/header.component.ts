@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { PlaceMarkerService } from '../../core/services/place-marker.service';
 import { CountyWeather, WeatherService } from '../../core/services/weather.service';
 
@@ -8,6 +8,8 @@ import { CountyWeather, WeatherService } from '../../core/services/weather.servi
   styleUrls: ['./header.component.scss']
 })
 export class HeaderComponent implements OnInit {
+  @Input() filtersOpen = false;
+  @Output() filtersToggle = new EventEmitter<void>();
   title: string = 'Taiwan Explorer';
   subtitle: string = '探索台灣';
   weather: CountyWeather | null = null;

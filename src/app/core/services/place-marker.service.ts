@@ -1,3 +1,4 @@
+import { PlaceRecordsService } from './place-records.service';
 import { Injectable } from '@angular/core';
 import * as L from 'leaflet';
 import { BehaviorSubject } from 'rxjs';
@@ -42,7 +43,7 @@ export class PlaceMarkerService {
       iconAnchor: [15, 30],
     });
 
-    return L.marker([place.latitude, place.longitude], {
+    const marker = L.marker([place.latitude, place.longitude], {
       icon,
       title: place.name,
       alt: place.name
@@ -53,9 +54,14 @@ export class PlaceMarkerService {
       maxHeight: 320,
       autoPanPadding: L.point(16, 16)
     });
+    if(this.records)marker.on('popupopen',()=>{
+      const button=marker.getPopup()?.getElement()?.querySelector<HTMLButtonElement>('.place-info__record');
+      if(button)button.onclick=()=>this.records.open(place);
+    });
+    return marker;
   }
 
-  constructor(private placeService: PlaceService) {}
+  constructor(private placeService: PlaceService, private records: PlaceRecordsService) {}
 
   setCategoryFilter(categories: readonly PlaceCategory[]): void {
     this.selectedCategories = [...categories];

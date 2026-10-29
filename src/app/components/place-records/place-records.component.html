@@ -1,0 +1,39 @@
+<section class="record-connection" aria-label="私人地點紀錄">
+  <button type="button" (click)="connect()" [disabled]="records.state.phase === 'loading' || records.state.phase === 'saving'">{{ records.state.phase === 'connecting' ? '取消登入' : records.visible ? '重新連接 Google Drive' : '連接 Google Drive' }}</button>
+  <span role="status" aria-live="polite">{{ records.status }}</span>
+  <span *ngIf="records.visible">{{ records.state.account?.email }}</span>
+  <button type="button" *ngIf="records.state.phase === 'empty'" (click)="records.create()">建立我的地點紀錄</button>
+  <ng-container *ngIf="records.state.phase === 'choosing'">
+    <label>地點紀錄 <select #library><option *ngFor="let library of records.state.libraries" [value]="library.id">{{ library.name }}（{{ library.id }}）</option></select></label>
+    <button type="button" (click)="records.session.open(library.value)">開啟</button>
+  </ng-container>
+  <button type="button" *ngIf="records.canEdit" (click)="records.session.refresh()">重新同步</button>
+  <button type="button" *ngIf="records.state.document || records.state.draft" (click)="backup()">下載備份</button>
+  <button type="button" *ngIf="records.state.phase === 'error' && records.visible" (click)="records.session.retry()">重試同步</button>
+  <button type="button" *ngIf="records.state.account" [disabled]="records.state.pending || records.state.phase === 'connecting' || records.state.phase === 'loading' || records.state.phase === 'saving'" (click)="disconnect()">登出</button>
+  <div class="conflict" *ngIf="records.state.phase === 'conflict'">
+    <p>另一台裝置有不同版本，請先下載備份，再選擇要採用的內容。</p>
+    <button type="button" *ngIf="records.state.draft" (click)="resolve('draft')">採用目前草稿</button>
+    <button type="button" *ngFor="let head of records.state.heads" (click)="resolve(head.id)">採用雲端版本 {{ head.name }}</button>
+  </div>
+</section>
+<dialog #editor aria-labelledby="record-title" (cancel)="$event.preventDefault(); close()">
+  <div class="editor-heading"><div><p>我的地點紀錄</p><h2 id="record-title">{{ place?.name }}</h2><p>{{ place?.county }} {{ place?.district }}</p></div><button type="button" aria-label="關閉地點紀錄" (click)="close()">✕</button></div>
+  <p *ngIf="!records.canEdit" class="notice">{{ records.status }}<span *ngIf="!records.visible">。連接並載入私人紀錄後即可編輯。</span></p>
+  <button type="button" *ngIf="!records.visible" (click)="connect()">{{ records.state.phase === 'connecting' ? '取消登入' : '連接 Google Drive' }}</button>
+  <button type="button" *ngIf="records.state.phase === 'empty'" (click)="records.create()">建立我的地點紀錄</button>
+  <form *ngIf="records.visible" (ngSubmit)="save()">
+    <fieldset [disabled]="!records.canEdit">
+      <legend>個人評價</legend>
+      <div class="stars" role="group" aria-label="個人星等"><button type="button" *ngFor="let star of stars" [class.selected]="form.rating !== null && form.rating >= star" [attr.aria-pressed]="form.rating === star" [attr.aria-label]="star + ' 顆星'" (click)="form.rating = star">★</button></div>
+      <div class="rating-caption">{{ form.rating === null ? '未評分' : form.rating + ' / 5 顆星' }} <button type="button" (click)="form.rating = null">清除評分</button></div>
+      <label>是否去過<select name="visited" [(ngModel)]="form.visited"><option [ngValue]="null">未設定</option><option [ngValue]="true">去過</option><option [ngValue]="false">沒去過</option></select></label>
+      <label>是否好停車<select name="parking" [(ngModel)]="form.parking"><option [ngValue]="null">未設定</option><option [ngValue]="true">好停車</option><option [ngValue]="false">不好停車</option></select></label>
+      <label>季節限定<select name="seasonal" [(ngModel)]="form.seasonal"><option [ngValue]="null">未設定</option><option [ngValue]="true">是</option><option [ngValue]="false">否</option></select></label>
+      <label *ngIf="form.seasonal === true">季節說明<textarea name="seasonalNote" [(ngModel)]="form.seasonalNote" maxlength="1000" rows="3" placeholder="例如：每年 3～4 月賞櫻"></textarea></label>
+      <button class="save" type="submit">儲存到 Google Drive</button>
+    </fieldset>
+  </form>
+  <div *ngIf="records.visible"><button type="button" *ngIf="records.canEdit" (click)="reload()">重新載入此地點</button> <button type="button" *ngIf="records.state.document || records.state.draft" (click)="backup()">下載草稿備份</button></div>
+  <p role="status" aria-live="polite">{{ message }}</p>
+</dialog>

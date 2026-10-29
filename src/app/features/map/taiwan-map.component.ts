@@ -24,6 +24,7 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
   private locationMarker?: L.Marker;
   private accuracyCircle?: L.Circle;
   private map!: L.Map;
+  private mapResizeObserver?: ResizeObserver;
   private readonly countyNameOverrides: Record<string, string> = {
     '台北市': '臺北市',
     '台中市': '臺中市',
@@ -52,6 +53,7 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.locationSubscription?.unsubscribe();
     this.geoJsonSubscription?.unsubscribe();
+    this.mapResizeObserver?.disconnect();
     this.placeMarkerService.clearMarkers();
     this.map?.remove();
   }
@@ -145,6 +147,10 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
 
     this.map.on('zoomend', this.onZoomChange.bind(this));
     this.placeMarkerService.loadMarkers(this.map);
+    if (typeof ResizeObserver !== 'undefined') {
+      this.mapResizeObserver = new ResizeObserver(() => this.map.invalidateSize({ animate: false }));
+      this.mapResizeObserver.observe(this.map.getContainer());
+    }
   }
 
   private loadGeoJSON(): void {

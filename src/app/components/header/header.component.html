@@ -6,9 +6,17 @@
             <h1>探索台灣</h1>
         </div>
     </div>
-    <div class="search">
-        <span aria-hidden="true">⌕</span>
-        <input type="search" placeholder="搜尋景點、美食或地區" aria-label="搜尋景點、美食或地區" (input)="searchPlaces($event)" />
+    <div class="search-actions">
+        <div class="search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="搜尋景點、美食或地區" aria-label="搜尋景點、美食或地區" (input)="searchPlaces($event)" />
+        </div>
+        <button type="button" class="filter-toggle" [class.filter-toggle--active]="filtersOpen" [attr.aria-expanded]="filtersOpen" aria-controls="explore-filters" (click)="filtersToggle.emit()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M3 5h18M6 12h12M10 19h4" />
+            </svg>
+            篩選
+        </button>
     </div>
     <div class="weather" *ngIf="weather" aria-live="polite">
         <span class="weather__icon" aria-hidden="true">{{ weatherIcon }}</span>

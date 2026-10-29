@@ -23,7 +23,14 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [
+              "src/assets/records/config.js",
+              "src/assets/records/record-file.js",
+              "src/assets/records/record-drive.js",
+              "src/assets/records/record-cloud.js",
+              "src/assets/records/record-login.js",
+              "src/assets/records/record-auth.js"
+            ]
           },
           "configurations": {
             "production": {

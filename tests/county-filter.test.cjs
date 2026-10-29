@@ -18,13 +18,18 @@ function load(filename) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2018, experimentalDecorators: true }
   }).outputText;
   const localRequire = name => {
-    if (name === '@angular/core') return { Injectable: () => value => value, Component: () => value => value };
+    if (name === '@angular/core') return { Injectable: () => value => value, Component: () => value => value, Inject: () => () => {} };
+    if (name === '@angular/common') return { DOCUMENT: 'DOCUMENT', CommonModule: class {} };
+    if (name.startsWith('src/')) return load(name + '.ts');
     if (name === 'leaflet') return {
       divIcon: options => options,
       point: (x, y) => ({ x, y }),
       marker: coordinates => ({
         bindPopup(content, options) { this.popup = { getContent: () => content, options }; return this; },
         getPopup() { return this.popup; },
+        bindTooltip(content) { this.tooltip = content; return this; },
+        setTooltipContent(content) { this.tooltip = content; return this; },
+        setLatLng(point) { this.point = point; return this; },
         addTo(map) { map.visible.push(coordinates); this.map = map; return this; },
         remove() { this.map.visible.splice(this.map.visible.indexOf(coordinates), 1); }
       })
@@ -154,4 +159,130 @@ test('details popup handles missing fields and escapes text and unsafe links', (
   assert.ok(!html.includes('javascript:'));
   assert.ok(!html.includes('undefined'));
   assert.ok(html.includes('Google 地圖'));
+});
+
+
+const locationServiceFile = 'src/app/core/services/location.service.ts';
+function getLocationService() {
+  assert.ok(fs.existsSync(locationServiceFile), 'a location service must support phone and IP positioning');
+  return load(locationServiceFile).LocationService;
+}
+
+test('desktop location uses IP coordinates and converts kilometer accuracy to meters', () => {
+  const LocationService = getLocationService();
+  const service = new LocationService({ get: url => {
+    assert.equal(url, 'https://get.geojs.io/v1/ip/geo.json');
+    return of({ latitude: '24.1477', longitude: '120.6736', accuracy: 5 });
+  } }, { defaultView: { navigator: { userAgent: 'Mozilla Windows NT', maxTouchPoints: 0 } } });
+  let location;
+  service.watchLocation().subscribe(value => { location = value; });
+  assert.deepEqual(location, { latitude: 24.1477, longitude: 120.6736, accuracy: 5000, source: 'ip' });
+});
+
+test('phone location watches fresh device positions and releases the watch on unsubscribe', () => {
+  const LocationService = getLocationService();
+  let cleared;
+  let update;
+  const service = new LocationService({ get: () => { throw new Error('device positioning must not request IP data'); } }, {
+    defaultView: { navigator: { userAgent: 'Mozilla iPhone', maxTouchPoints: 5, geolocation: {
+      watchPosition(success, error, options) {
+        assert.equal(options.enableHighAccuracy, true);
+        assert.equal(options.maximumAge, 10000);
+        update = success;
+        return 7;
+      },
+      clearWatch(id) { cleared = id; }
+    } } }
+  });
+  const locations = [];
+  const subscription = service.watchLocation().subscribe(value => locations.push(value));
+  update({ coords: { latitude: 25.03, longitude: 121.56, accuracy: 15 } });
+  update({ coords: { latitude: 25.04, longitude: 121.57, accuracy: 10 } });
+  assert.deepEqual(locations, [
+    { latitude: 25.03, longitude: 121.56, accuracy: 15, source: 'device' },
+    { latitude: 25.04, longitude: 121.57, accuracy: 10, source: 'device' }
+  ]);
+  subscription.unsubscribe();
+  assert.equal(cleared, 7);
+});
+
+test('phone permission denial falls back to an explicitly approximate IP position', () => {
+  const LocationService = getLocationService();
+  const service = new LocationService({ get: () => of({ latitude: '22.63', longitude: '120.30' }) }, {
+    defaultView: { navigator: { userAgent: 'Android Mobile', geolocation: {
+      watchPosition(success, error) { error({ code: 1 }); return 8; },
+      clearWatch() {}
+    } } }
+  });
+  let location;
+  service.watchLocation().subscribe(value => { location = value; });
+  assert.equal(location.source, 'ip');
+  assert.equal(location.latitude, 22.63);
+});
+
+test('invalid IP responses never produce a fabricated zero-coordinate location', () => {
+  const LocationService = getLocationService();
+  for (const response of [{ latitude: 0, longitude: 0 }, { latitude: null, longitude: null }, { latitude: '', longitude: '' }, { latitude: '91', longitude: '181' }]) {
+    const service = new LocationService({ get: () => of(response) }, { defaultView: { navigator: { userAgent: 'Windows' } } });
+    let received = false;
+    let failure;
+    service.watchLocation().subscribe(() => { received = true; }, error => { failure = error; });
+    assert.equal(received, false);
+    assert.ok(failure, 'invalid coordinates must report an error');
+  }
+});
+
+test('return-to-location centers the newest position while preserving the current zoom', () => {
+  const { TaiwanMapComponent } = load('src/app/features/map/taiwan-map.component.ts');
+  const calls = [];
+  const component = new TaiwanMapComponent({}, { loadMarkers() {} }, {}, {});
+  component.map = { getZoom: () => 13, setView: (coordinates, zoom) => calls.push({ coordinates, zoom }) };
+  component.currentLocation = { latitude: 24.15, longitude: 120.67, source: 'device', accuracy: 10 };
+  assert.equal(typeof component.returnToLocation, 'function', 'the map must offer a return-to-location action');
+  component.returnToLocation();
+  component.currentLocation = { latitude: 24.16, longitude: 120.68, source: 'device', accuracy: 12 };
+  component.returnToLocation();
+  assert.deepEqual(calls, [
+    { coordinates: [24.15, 120.67], zoom: 13 },
+    { coordinates: [24.16, 120.68], zoom: 13 }
+  ]);
+});
+
+
+test('new device fixes update the position without pulling the map back after a manual pan', () => {
+  const { Subject } = require('rxjs');
+  const positions = new Subject();
+  const { TaiwanMapComponent } = load('src/app/features/map/taiwan-map.component.ts');
+  const calls = [];
+  let currentZoom = 10;
+  const component = new TaiwanMapComponent({}, { loadMarkers() {} }, {}, { watchLocation: () => positions });
+  component.map = {
+    visible: [],
+    getZoom: () => currentZoom,
+    setView(coordinates, zoom) { currentZoom = zoom; calls.push({ coordinates, zoom }); }
+  };
+  component.returnToLocation();
+  positions.next({ latitude: 24.15, longitude: 120.67, source: 'device' });
+  component.map.setView([25, 121], 8);
+  positions.next({ latitude: 24.16, longitude: 120.68, source: 'device' });
+  assert.equal(calls.length, 2, 'new position fixes must not override a manual map pan');
+  component.returnToLocation();
+  assert.deepEqual(calls[2], { coordinates: [24.16, 120.68], zoom: 8 });
+  assert.equal(component.locationLoading, false);
+});
+
+
+test('unavailable location centers Taichung Station without presenting it as the user position', () => {
+  const { throwError } = require('rxjs');
+  const { TaiwanMapComponent } = load('src/app/features/map/taiwan-map.component.ts');
+  const calls = [];
+  const component = new TaiwanMapComponent({}, { loadMarkers() {} }, {}, {
+    watchLocation: () => throwError(new Error('No valid location'))
+  });
+  component.map = { setView: (coordinates, zoom) => calls.push({ coordinates, zoom }) };
+  component.returnToLocation();
+  assert.deepEqual(calls, [{ coordinates: [24.13694, 120.68472], zoom: 15 }]);
+  assert.equal(component.currentLocation, null);
+  assert.equal(component.locationLoading, false);
+  assert.ok(component.locationStatus.includes('台中火車站'));
 });

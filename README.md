@@ -14,6 +14,12 @@ TaiwanExplorer is an interactive geographic exploration platform designed to pro
 The application uses client-side rendering (CSR). Its browser entry point is `src/main.ts`, which bootstraps `AppModule`. Server-side rendering (SSR) and prerendering are not configured, and no Node.js server is required for hosting the built site.
 
 Run `npm run build` to generate the static site in `dist/TaiwanExplorer`. Publish that directory to a static host such as GitHub Pages. Node.js is only needed for local development and build tooling.
+
+## Location
+Mobile devices request high-accuracy browser geolocation while the page is open. Desktop browsers, and devices where geolocation is unavailable or denied, use approximate IP geolocation from [GeoJS](https://www.geojs.io/docs/v1/endpoints/geo/). Device coordinates stay in the browser; the IP lookup does not send GPS coordinates to GeoJS.
+
+The blue dot shows the device or IP position, with an accuracy circle when available. Dragging the map does not enable automatic camera following; the return-to-location button centers the latest position while preserving the current zoom. The initial and failed-location view centers on Taichung Station. This fallback is not shown as the user's current location, and failed requests can be retried.
+
 ## Project Structure
 ```
 src/

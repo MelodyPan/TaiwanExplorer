@@ -1,4 +1,4 @@
-// Personal records only. Public place data and credentials never enter this document.
+// 只保存私人紀錄；公開景點與授權憑證不可混入備份資料。
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.RecordFile=factory();})(globalThis,function(){
  'use strict';
  function readDataFile(text){
@@ -10,7 +10,9 @@
    if(r.rating!==null&&(!Number.isInteger(r.rating)||r.rating<1||r.rating>5))bad();
    for(const key of ['visited','parking','seasonal'])if(r[key]!==null&&typeof r[key]!=='boolean')bad();
    if(typeof r.seasonalNote!=='string'||r.seasonalNote.length>1000||r.seasonal!==true&&r.seasonalNote!=='')bad();
-   if(Object.keys(r).some(k=>!['rating','visited','parking','seasonal','seasonalNote'].includes(k)))bad();
+   // 舊檔可缺少 category；有值時只能是既有六類或 null，維持格式相容與分類一致。
+   if(r.category!==undefined&&r.category!==null&&!['ATTRACTION','FOOD','CAFE','HOTEL','CULTURE','NATURE'].includes(r.category))bad();
+   if(Object.keys(r).some(k=>!['rating','visited','parking','seasonal','seasonalNote','category'].includes(k)))bad();
   }
   if(Object.keys(data).some(k=>!['schemaVersion','records','updatedAt'].includes(k)))bad();
   return data;

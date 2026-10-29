@@ -57,3 +57,22 @@ app-place-list {
 	}
 }
 app-sidebar[hidden] { display: none; }
+
+.back-to-top {
+  position: fixed;
+  right: calc(18px + env(safe-area-inset-right, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 1100;
+  width: 48px;
+  height: 48px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #2385af;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(25, 92, 130, 0.3);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.back-to-top:focus-visible { outline: 3px solid #18304a; outline-offset: 3px; }

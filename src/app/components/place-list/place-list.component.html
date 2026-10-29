@@ -6,14 +6,24 @@
 
   <p class="place-list__empty" *ngIf="places.length === 0">目前沒有符合的地點</p>
 
-  <article class="place-list__item" *ngFor="let place of places">
+  <article #row class="place-list__row" *ngFor="let place of places"
+    [class.place-list__row--revealed]="records.visible && revealedPlaceId === place.id"
+    [attr.tabindex]="records.visible ? 0 : null"
+    [attr.aria-label]="records.visible ? place.name + '，向左滑動或按左方向鍵顯示編輯；向右滑動或按 Escape 收起' : null"
+    (pointerdown)="onRowPointerDown(place, $event)" (pointerup)="onRowPointerUp(place, $event)"
+    (pointercancel)="cancelRowGesture()" (keydown)="onRowKeydown(place, $event)">
+    <button *ngIf="records.visible && revealedPlaceId !== place.id" type="button" class="reveal-edit"
+      [attr.aria-label]="'顯示' + place.name + '的編輯按鈕'" (pointerdown)="$event.stopPropagation()" (click)="revealEdit(place, row)">顯示編輯</button>
+    <button *ngIf="records.visible && revealedPlaceId === place.id" type="button" class="edit-record"
+      [attr.aria-label]="'編輯' + place.name" (pointerdown)="$event.stopPropagation()" (click)="editPlace(place, row)">編輯</button>
+    <div class="place-list__item">
     <span class="place-list__emoji" aria-hidden="true">{{ place.category === 'FOOD' ? '🍜' : place.category === 'ATTRACTION' ? '🏞' : place.category === 'NATURE' ? '🌲' : place.category === 'CULTURE' ? '🏛' : place.category === 'CAFE' ? '☕' : '🏨' }}</span>
     <div>
       <h3>{{ place.name }}</h3>
       <p>{{ place.county }} {{ place.district }}</p>
       <p class="personal-summary" *ngIf="records.visible">{{ records.record(place.id).rating === null ? '未評分' : '★ ' + records.record(place.id).rating + '/5' }} · {{ records.record(place.id).visited === null ? '未設定是否去過' : records.record(place.id).visited ? '去過' : '沒去過' }}</p>
-      <button type="button" class="edit-record" (click)="records.open(place)">我的地點紀錄／編輯</button>
     </div>
     <span class="place-list__tag">{{ place.category }}</span>
+    </div>
   </article>
 </aside>

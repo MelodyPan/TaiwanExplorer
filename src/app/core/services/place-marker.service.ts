@@ -1,7 +1,7 @@
 import { PlaceRecordsService } from './place-records.service';
 import { Injectable } from '@angular/core';
 import * as L from 'leaflet';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { Place, PlaceCategory } from '../../models/place.model';
 import { PlaceService } from './place.service';
 import { createPlacePopupContent } from './place-popup-content';
@@ -11,6 +11,7 @@ import { createPlacePopupContent } from './place-popup-content';
 })
 export class PlaceMarkerService {
   private markers: L.Marker[] = [];
+  private markerSubscription?: Subscription;
   private map?: L.Map;
   private selectedCategories: PlaceCategory[] = [];
   private searchTerm = '';
@@ -88,14 +89,17 @@ export class PlaceMarkerService {
   }
 
   loadMarkers(map: L.Map, ignoreZoomLevel = false): void {
+    // 資料流會隨私人類別變動而持續發值；每次平移／重載只能保留一組訂閱。
+    this.markerSubscription?.unsubscribe();
     this.map = map;
     if (!ignoreZoomLevel && map.getZoom() < 8) {
       this.clearMarkers();
       return;
     }
 
-    this.placeService.getPlaces().subscribe(places => {
-      this.clearMarkers();
+    this.markerSubscription = this.placeService.getPlaces().subscribe(places => {
+      // 回呼內只移除舊圖示，不能呼叫會取消目前訂閱的 clearMarkers。
+      this.removeMarkers();
       const bounds = map.getBounds();
       this.markers = places
         .filter(place => this.selectedCategories.length === 0 || this.selectedCategories.includes(place.category))
@@ -124,6 +128,11 @@ export class PlaceMarkerService {
   }
 
   clearMarkers(): void {
+    this.markerSubscription?.unsubscribe();
+    this.removeMarkers();
+  }
+
+  private removeMarkers(): void {
     for (const marker of this.markers) {
       marker.remove();
     }

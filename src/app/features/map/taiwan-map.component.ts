@@ -86,8 +86,10 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
         const firstPosition = this.currentLocation === null;
         this.currentLocation = location;
         this.locationLoading = false;
+        // 預設站點只當地圖中心，前面已移除藍點，不能讓使用者誤認為本人位置。
         this.locationError = '';
         this.updateLocationMarker(location);
+        // 只有初次有效定位自動移鏡頭，後續更新藍點不把使用者拖開的地圖拉回。
         if (firstPosition) this.centerOnLocation(location, false);
       },
       error: () => {
@@ -148,6 +150,7 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
     this.map.on('zoomend', this.onZoomChange.bind(this));
     this.placeMarkerService.loadMarkers(this.map);
     if (typeof ResizeObserver !== 'undefined') {
+      // 篩選區展開會改變容器寬度，通知 Leaflet 重排以免圖磚留白。
       this.mapResizeObserver = new ResizeObserver(() => this.map.invalidateSize({ animate: false }));
       this.mapResizeObserver.observe(this.map.getContainer());
     }

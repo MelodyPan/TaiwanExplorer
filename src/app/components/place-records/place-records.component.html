@@ -24,7 +24,9 @@
   <button type="button" *ngIf="records.state.phase === 'empty'" (click)="records.create()">建立我的地點紀錄</button>
   <form *ngIf="records.visible" (ngSubmit)="save()">
     <fieldset [disabled]="!records.canEdit">
-      <legend>個人評價</legend>
+      <legend>我的設定</legend>
+      <label>類別<select name="category" [(ngModel)]="form.category"><option [ngValue]="null">沿用網站原始類別</option><option *ngFor="let category of categories" [ngValue]="category.value">{{ category.label }}</option></select></label>
+      <p>個人評價</p>
       <div class="stars" role="group" aria-label="個人星等"><button type="button" *ngFor="let star of stars" [class.selected]="form.rating !== null && form.rating >= star" [attr.aria-pressed]="form.rating === star" [attr.aria-label]="star + ' 顆星'" (click)="form.rating = star">★</button></div>
       <div class="rating-caption">{{ form.rating === null ? '未評分' : form.rating + ' / 5 顆星' }} <button type="button" (click)="form.rating = null">清除評分</button></div>
       <label>是否去過<select name="visited" [(ngModel)]="form.visited"><option [ngValue]="null">未設定</option><option [ngValue]="true">去過</option><option [ngValue]="false">沒去過</option></select></label>

@@ -21,6 +21,7 @@ export class LocationService {
       return this.getIpLocation();
     }
 
+    // 手機持續接收裝置位置；拒絕、逾時或無效資料才改用 IP，不能偽造定位點。
     return new Observable<UserLocation>(observer => {
       const watchId = navigator.geolocation.watchPosition(position => {
         try {
@@ -52,6 +53,7 @@ export class LocationService {
       timeout(10000),
       map(response => ({
         ...this.coordinates(response.latitude, response.longitude),
+        // IP 服務以公里回傳誤差，Leaflet 圓半徑與裝置定位則使用公尺。
         accuracy: this.accuracy(response.accuracy === undefined ? undefined : response.accuracy * 1000),
         source: 'ip' as const
       })),
@@ -66,6 +68,7 @@ export class LocationService {
     };
     const lat = number(latitude);
     const lng = number(longitude);
+    // 本專案將 0,0 視為無效預設點，連同空字串與越界座標一起拒絕。
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) {
       throw new Error('定位資料不正確。');
     }

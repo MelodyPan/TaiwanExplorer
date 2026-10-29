@@ -1,8 +1,29 @@
-# Progress — plan: 2026-10-29-place-records.md
-Task 1 complete: copied and isolated Home bookmarks engines; strict records schema; deterministic retry tests. No changes made to Home.
-Task 2 complete: Angular editor, explicit saves, map/list entry, token expiry masking, editor drafts, backups and account binding. Mock browser round trip saved and reopened rating=4, visited=true, parking=false, seasonal=true, note=每年 3～4 月賞櫻. At viewport 390x844 dialog width366, no horizontal overflow; default filters hidden and status below map.
-Verification: node --test tests/*.test.cjs — 58 passed, 0 failed. Standalone tests used because the preexisting Angular spec configuration remains broken (TS18003); no dependency upgrade staged.
-Review: fresh reviewer found three important component lifecycle issues. Added red tests, fixed logout draft guard, asynchronous A/B editor race, and initial login document loading. Follow-up review found no remaining important issues.
-Minor limitation: if a different account is rejected and cloud document is cleared, reconnect original account before downloading an unsubmitted editor draft. Draft stays in memory.
-Ruling: continue in the existing workspace to preserve the previously approved, uncommitted filter toggle work; no new worktree or dependency installation.
-Real Google account authorization and physical iPhone popup behavior remain acceptance checks; tests use a clearly labeled local mock and do not access personal Drive data.
+# 個人地點紀錄實作與驗證紀錄
+
+[返回文件總覽](../../README.md) · [實作計畫](2026-10-29-place-records.md)
+
+## 初版
+
+已隔離並沿用 Home bookmarks 的 Drive、同步及登入核心，採私人 JSON 與每日存檔，未修改 Home 專案。初版提交為 c646280；當次 58 項測試通過，發布後核對線上資源與本機產物一致。
+
+## 後續調整
+
+已在工作目錄加入左滑才顯示編輯、右下角「上」按鈕，以及私人類別維護；累計 66 項回歸測試通過，建置成功。中文文件與特殊規則註解在這些修改上接續整理。發布狀態仍需以後續提交與線上版本核對，不將工作目錄內容當成已上線。
+
+## 審查與修正
+
+獨立審查找出三項表單問題：登出遺失未存內容、儲存 A 地點完成後誤改 B 地點，以及登入時先確認帳號卻尚未載入文件。已先加入失敗測試，再修正，複查未見其餘重大問題。
+
+左滑審查補上螢幕閱讀器入口及關閉視窗後的焦點返回。私人類別審查確認地圖與清單共用有效資料、登出恢復公開分類、舊格式相容，以及標記訂閱正確替換。
+
+## 實際驗證範圍
+
+模擬 Drive 的手機操作可保存並重新開啟四顆星、去過、不好停車、季節說明。把宮原眼科改為咖啡後，清單與地圖都改為咖啡圖示。左滑只露出按鈕，按下才開視窗；整頁向下捲動後「上」出現，點擊後捲動位置回到 0 並隱藏。
+
+測試使用清楚標示的本機模擬頁，不會讀寫真實私人 Drive。Google 專案政策、實際帳號授權與實體 iPhone 彈窗仍需真實驗收。
+
+## 已知限制與工作範圍
+
+若錯帳號重新授權遭拒且雲端文件暫時清空，需先連回原帳號才能下載未提交表單備份；記憶體草稿仍保留。Angular 舊 spec 設定的 TS18003 問題尚未修復。
+
+為保留先前已確認的未提交功能，沿用目前工作目錄；沒有另開工作樹或安裝依賴。既有 package.json 與 package-lock.json 的未提交依賴變更不納入本次交付。

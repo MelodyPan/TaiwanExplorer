@@ -37,7 +37,12 @@
   justify-content: space-between;
   gap: 12px;
   padding: 13px 0;
-  border-bottom: 1px solid #dceef7;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 78px;
+  background: #f9fdff;
+  transition: transform 180ms ease;
 
   h3 {
     margin: 0 0 4px;
@@ -59,4 +64,34 @@
 .place-list__empty {
   color: #688397;
 }
-.edit-record{margin-top:8px;min-height:36px;padding:6px 10px;color:#195c82;border:1px solid #badfee;border-radius:6px;background:#e9f7ff;cursor:pointer;font:inherit;font-size:12px}.place-list__item .personal-summary{margin-top:5px;color:#8a6400}
+.place-list__row {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid #dceef7;
+  touch-action: pan-y;
+}
+.place-list__row[tabindex] .place-list__item { user-select: none; -webkit-user-select: none; }
+.place-list__row:focus-visible { outline: 2px solid #2385af; outline-offset: -2px; }
+.place-list__row--revealed .place-list__item { transform: translateX(-76px); }
+.place-list__item > div { min-width: 0; }
+.place-list__item h3 { overflow-wrap: anywhere; }
+.edit-record {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 76px;
+  min-height: 44px;
+  border: 0;
+  background: #2385af;
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.edit-record:focus-visible { outline: 3px solid #18304a; outline-offset: -4px; }
+.place-list__item .personal-summary { margin-top: 5px; color: #8a6400; }
+@media (prefers-reduced-motion: reduce) { .place-list__item { transition: none; } }
+
+// 螢幕閱讀器保留可啟動入口，平常不佔版面；鍵盤聚焦時才顯示。
+.reveal-edit { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.reveal-edit:focus-visible { z-index: 2; width: auto; height: 40px; top: 4px; right: 4px; margin: 0; padding: 8px 12px; clip: auto; color: white; background: #2385af; border-radius: 6px; outline: 2px solid #18304a; }

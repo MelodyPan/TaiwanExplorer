@@ -1,25 +1,19 @@
-# Place Records Implementation Plan
-> **For agentic workers:** Use superpowers:executing-plans to implement task-by-task.
-**Goal:** Maintain personal place records across devices with private Google Drive.
-**Architecture:** Adapt the existing bookmarks Drive and session engines with an independent schema and application identity; Angular owns the login controls and editor.
-**Tech Stack:** Angular 14, TypeScript, Leaflet, Google Identity Services, Drive REST.
-**Spec:** ../specs/2026-10-29-place-records-design.md
-## Global Constraints
-CSR, no new backend, private records, no bookmarks writes, preserve existing uncommitted work.
-## Review Focus
-Expired authorization disables editing; stale writes produce a choice; response loss retries original operation; invalid record input rejected; closing/reopening editor preserves unsaved changes.
-### Task 1: Drive records
-Files: src/assets/records/{record-file,record-drive,record-cloud,record-login}.js; tests/record-*.test.cjs.
-Interfaces: readDataFile(text), createDataFile(records), createDriveStore(options), createCloudSession(options).
-- [x] Add schema tests and adapted Drive/session regression tests; run and observe missing-module failure.
-- [x] Adapt engines with independent namespace, strict schema, and daily records filenames.
-- [x] Run node --test tests/record-*.test.cjs; expect all pass.
-### Task 2: Angular editor and login
-Files: core/services/place-records.service.ts, components/place-records/*, app.module.ts, place list and marker service.
-Interfaces: open(place), save(placeId,record), record(placeId), connect(), session state.
-- [x] Implement five-star and tri-state fields, optional explanation, explicit save, private status, backup, retry/conflict controls.
-- [x] Connect marker popup and list buttons; preserve public map and hidden filters.
-- [x] Build and verify mobile UI, logged-out behavior and mocked Drive round trip.
-### Task 3: Delivery
-- [x] Review changes, run regression tests and build, document Drive setup.
-- [ ] Commit selected files, push and publish authorized GitHub Pages update; verify deployed assets.
+# 個人地點紀錄實作計畫
+
+[返回文件總覽](../../README.md) · [設計依據](../specs/2026-10-29-place-records-design.md)
+
+## 目標與架構
+
+沿用 Home bookmarks 的 Google Drive 與同步核心，以獨立資料格式、儲存標記及私人資料夾保存地點紀錄。Angular 負責授權控制與編輯視窗；維持 CSR，不新增儲存伺服器。
+
+## 已完成工作
+
+- [x] 先加入資料格式、Drive 及同步回歸測試，確認缺少實作時會失敗。
+- [x] 隔離 Drive、同步與登入模組，採嚴格驗證、每日檔案、條件寫入及原操作重試。
+- [x] 加入星等、是否去過、停車、季節限定、說明與私人類別覆寫。
+- [x] 加入地圖、清單編輯入口；清單預設隱藏按鈕，支援左滑、鍵盤及輔助操作。
+- [x] 保留篩選預設隱藏、定位說明在地圖下方，加入回到頁首。
+- [x] 保護授權到期、錯帳號、舊表單與切換地點時的未存草稿。
+- [x] 完成回歸測試、建置與模擬手機操作；真實 Google 授權另行驗收。
+
+初版個人紀錄已隨 c646280 提交並發布；後續功能與中文文件是否已發布，應以實際 Git 提交及線上資源驗證為準，不以計畫勾選作為發布證明。

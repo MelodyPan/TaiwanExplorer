@@ -5,6 +5,7 @@ const categoryNames: Record<PlaceCategory, string> = {
   HOTEL: '住宿', CULTURE: '文化', NATURE: '自然'
 };
 
+// Leaflet 接收原始 HTML 字串，沒有 Angular 範本跳脫保護，所有資料文字都必須轉義。
 function escapeHtml(value: string): string {
   const entities: Record<string, string> = {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -12,6 +13,7 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, character => entities[character]);
 }
 
+// 文字跳脫無法阻止 javascript: 等網址；另外限制可開啟的協定。
 function safeHttpUrl(value?: string): string | null {
   if (!value) return null;
   try {

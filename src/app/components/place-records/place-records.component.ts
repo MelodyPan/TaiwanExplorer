@@ -10,6 +10,11 @@ export class PlaceRecordsComponent implements AfterViewInit, OnDestroy {
   place: Place | null = null;
   form = emptyRecord();
   stars = [1,2,3,4,5];
+  categories = [
+    {value:'ATTRACTION',label:'景點'}, {value:'FOOD',label:'美食'},
+    {value:'CAFE',label:'咖啡'}, {value:'HOTEL',label:'住宿'},
+    {value:'CULTURE',label:'文化'}, {value:'NATURE',label:'自然'}
+  ];
   message = '';
   private subscriptions = new Subscription();
   private drafts = new Map<number,EditorDraft>();
@@ -36,8 +41,8 @@ export class PlaceRecordsComponent implements AfterViewInit, OnDestroy {
         this.baseline = {...this.form};
         this.accountId = id;
       }
-      // Account verification precedes document loading. Populate a clean editor
-      // only when the document is ready; never replace an in-progress form.
+      // 帳號確認早於文件載入；等文件 ready 才填入乾淨表單，避免登入後顯示空值。
+      // 已編輯的表單或留存草稿不可被背景刷新覆蓋。
       if (this.records.canEdit && this.place && !this.drafts.has(this.place.id) && !this.differs(this.form, this.baseline)) {
         this.form = this.records.record(this.place.id);
         this.baseline = {...this.form};
@@ -61,6 +66,7 @@ export class PlaceRecordsComponent implements AfterViewInit, OnDestroy {
 
   close(): void { this.remember(); this.editor.nativeElement.close(); }
   connect(): void {
+    // 同步核心只知道已提交草稿；未提交表單也要綁定原帳號，防止重新登入時遺失。
     this.records.editorAccountId = this.hasUnsavedForms ? this.accountId : null;
     this.records.connect();
   }
@@ -70,13 +76,14 @@ export class PlaceRecordsComponent implements AfterViewInit, OnDestroy {
   }
   async save(): Promise<void> {
     if (!this.place) return;
+    // await 前保存地點與快照；完成時目前視窗可能已切換到另一筆資料。
     const id = this.place.id, submitted = {...this.form}, baseline = {...this.baseline};
     this.message = '';
     try {
       if (await this.records.save(id, submitted, baseline)) {
         const draft = this.drafts.get(id);
         if (!draft || !this.differs(draft.record, submitted)) this.drafts.delete(id);
-        // The user may have closed A and opened B while A was uploading.
+        // A 上傳期間可能已關閉並開啟 B；完成後只能修改原提交的 A，不能清掉 B 的草稿。
         if (this.place?.id === id && !this.differs(this.form, submitted)) {
           this.baseline = {...this.records.record(id)};
           this.form = {...this.baseline};
@@ -100,6 +107,7 @@ export class PlaceRecordsComponent implements AfterViewInit, OnDestroy {
   }
   @HostListener('window:beforeunload',['$event'])
   warnUnsaved(event: BeforeUnloadEvent): void {
+    // 表單未按儲存時還不在雲端佇列，離開提醒仍須涵蓋這些記憶體草稿。
     if (this.hasUnsavedForms) { event.preventDefault(); event.returnValue = ''; }
   }
   resolve(id: string): void {

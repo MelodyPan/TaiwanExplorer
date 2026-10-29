@@ -1,4 +1,4 @@
-// Record contents and unsynced drafts are memory-only.
+// 載入內容與未同步草稿僅在記憶體，不能把它們當成已保存的本機資料。
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.RecordCloud=factory();})(globalThis,function(){
  'use strict';
  const error=(code,message)=>Object.assign(new Error(message),{code});
@@ -33,7 +33,7 @@
   // 重新連接不是直接換憑證：先確認帳號，錯帳號時不得重試原分頁草稿。
   async function connect({resume=false}={}){
    if(state.pending||busy){state.error=error('busy','正在同步，請等待完成後再重新連接。');notify();return;}
-   // A new token is not trusted as the previous account until Drive confirms its identity.
+   // 取得新 token 仍須等 Drive 查證帳號，不能直接沿用前帳號的草稿權限。
    authorizedAccount=null;if(!resume)clearAuthorization();busy=true;state.phase='connecting';notify();
    try{
     await authorize({resume});const account=await store.account();authorizedAccount=account.id;

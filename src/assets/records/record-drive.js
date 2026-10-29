@@ -1,4 +1,4 @@
-// Private Drive storage. Reuse today's file, with conditional writes and explicit conflicts.
+// 私人 Drive 儲存：重用當日檔案，以條件寫入保護版本，衝突必須明確選擇。
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory(require('./record-file.js'));else root.RecordDrive=factory(root.RecordFile);})(globalThis,function(file){
  'use strict';
  const PURPOSE='melody-taiwan-records-v1',API='https://www.googleapis.com/drive/v3';
@@ -53,7 +53,7 @@
      try{created=await(await call(API+'/files?fields=id,name,mimeType,shared,appProperties',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)})).json();}
      catch(error){if(error.code!=='exists')throw error;created=await(await call(API+'/files/'+encodeURIComponent(folderRequestId)+'?fields=id,name,mimeType,shared,appProperties')).json();}
      if(!isPrivate(created)||created.name!==meta.name)throw new DriveError('folderPrivacy','無法確認 TaiwanExplorer 資料夾為私人，已暫停移動與上傳。請確認資料夾未被分享。');
-     // A second client may have created the same application folder concurrently.
+     // 另一台裝置可能同時建立相同應用資料夾，重新列出後再選定一致目標。
      folders=(await list(true)).filter(isPrivate);if(!folders.length)folders=[created];
     }
     folderId=folders.map(x=>x.id).sort()[0];folderRequestId='';return folderId;
@@ -84,7 +84,7 @@
    for(const meta of nodes){const p=meta.appProperties;let references=p.parent?[p.parent]:[];if(p.merge==='1')references=(await download(meta)).envelope.parents;
     if(references.some(id=>!validId(id)||id===meta.id||!ids.has(id)))throw invalid();parents.set(meta.id,references);
    }
-   // Validate ancestry iteratively so a damaged graph cannot hide a branch or loop forever.
+   // 迭代驗證祖先關係，避免損壞版本圖隱藏分支或形成無窮循環。
    const done=new Set();
    for(const meta of nodes){const visiting=new Set(),stack=[[meta.id,false]];while(stack.length){const [id,exit]=stack.pop();if(done.has(id))continue;if(exit){visiting.delete(id);done.add(id);continue;}if(visiting.has(id))throw invalid();visiting.add(id);stack.push([id,true]);for(const parent of parents.get(id))stack.push([parent,false]);}}
    const referenced=new Set([...parents.values()].flat()),heads=nodes.filter(x=>!referenced.has(x.id));if(!heads.length)throw invalid();
@@ -99,8 +99,7 @@
   async function conditionalFile(id){
    const response=await call(API+'/files/'+encodeURIComponent(id)+'?fields=id,parents,appProperties'),meta=await response.json(),etag=response.headers.get('etag');
    if(etag)return {meta,etag,version:'v3'};
-   // Drive v3 does not always expose ETags to browser clients. v2 includes the
-   // file ETag in JSON; use that same API version for the conditional write.
+   // 瀏覽器未必讀得到 v3 的 ETag；改用 v2 JSON 內的 ETag 時，寫入也必須用 v2。
    // v3 讀不到 ETag 時，用 v2 JSON 取回；同時重讀私有屬性，不能拿新 ETag 配舊 commit。
    const legacy=await(await call('https://www.googleapis.com/drive/v2/files/'+encodeURIComponent(id)+'?fields=id,etag,parents(id),properties(key,value,visibility)')).json();
    if(typeof legacy.etag!=='string'||!legacy.etag||legacy.etag.startsWith('W/'))throw new DriveError('conditional','無法取得 Google Drive 檔案版本，已保留未同步資料；請稍後重試。');
@@ -109,8 +108,7 @@
   }
   // 跨日先在舊 head 預約新檔 ID，再建立檔案；兩台裝置因此爭用同一 ID，不各生一份。
   async function reserveDay(operation){
-   // Reserve tomorrow's ID on an existing head before creation. Two devices then
-   // create the same Drive ID rather than two files with the same daily name.
+   // 跨日前先在舊 head 預約新 ID，兩台裝置共用同一 ID，避免同名卻不同檔。
    for(let attempt=0;attempt<3;attempt++){
     const {meta:base,etag,version}=await conditionalFile(operation.baseId);
     if(revisionKey(base)!==operation.baseRevision){pending=null;throw conflict(await graph(operation.datasetId));}
@@ -138,7 +136,7 @@
     if(current.appProperties.nextDay&&current.appProperties.nextDay>operation.day){pending=null;throw conflict(await graph(operation.datasetId));}
     if(!current.parents?.includes(parentFolder)){moveQuery='&addParents='+encodeURIComponent(parentFolder);if(current.parents?.length)moveQuery+='&removeParents='+encodeURIComponent(current.parents.join(','));}
    }
-   // Drive updates cannot change id or parents through the multipart metadata body.
+   // Drive 更新的 multipart metadata 不可改 id 或 parents，移動父資料夾須走網址參數。
    const uploadMeta=version==='v2'?{title:meta.name,mimeType:meta.mimeType,properties:privateProperties({...currentProperties,...props})}:operation.update?{name:meta.name,mimeType:meta.mimeType,appProperties:props}:meta;
    const boundary='bookmark_'+uuid(),body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(uploadMeta)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(envelope)+'\r\n--'+boundary+'--';
    if(new TextEncoder().encode(body).length>5*1024*1024)throw new DriveError('size','地點紀錄資料超過 5 MB，請先下載備份並縮減資料。');

@@ -18,7 +18,7 @@ function load(filename) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2018, experimentalDecorators: true }
   }).outputText;
   const localRequire = name => {
-    if (name === '@angular/core') return { Injectable: () => value => value, Component: () => value => value, Inject: () => () => {} };
+    if (name === '@angular/core') return { Injectable: () => value => value, Component: () => value => value, Inject: () => () => {}, HostListener: () => () => {} };
     if (name === '@angular/common') return { DOCUMENT: 'DOCUMENT', CommonModule: class {} };
     if (name.startsWith('src/')) return load(name + '.ts');
     if (name === 'leaflet') return {
@@ -285,4 +285,84 @@ test('unavailable location centers Taichung Station without presenting it as the
   assert.equal(component.currentLocation, null);
   assert.equal(component.locationLoading, false);
   assert.ok(component.locationStatus.includes('台中火車站'));
+});
+
+function swipeList(visible = true) {
+  const opened = [];
+  const records = { visible, changes$: new (require('rxjs').BehaviorSubject)(0), open: place => opened.push(place.id) };
+  const list = new PlaceListComponent({ getPlaces: () => of(places) }, new PlaceMarkerService({ getPlaces: () => of(places) }), records);
+  list.ngOnInit();
+  return { list, records, opened };
+}
+const pointer = (x, y, pointerId = 1) => ({ clientX: x, clientY: y, pointerId, button: 0, isPrimary: true });
+test('left swipe reveals one edit action without opening the editor; editing closes the action', () => {
+  const {list, opened} = swipeList();
+  assert.equal(list.revealedPlaceId, null);
+  list.onRowPointerDown(places[0], pointer(240, 100));
+  list.onRowPointerUp(places[0], pointer(130, 110));
+  assert.equal(list.revealedPlaceId, 1);
+  assert.deepEqual(opened, []);
+  list.onRowPointerDown(places[1], pointer(240, 100));
+  list.onRowPointerUp(places[1], pointer(130, 100));
+  assert.equal(list.revealedPlaceId, 2);
+  list.editPlace(places[1]);
+  assert.deepEqual(opened, [2]);
+  assert.equal(list.revealedPlaceId, null);
+});
+test('vertical scrolling, small movement, cancellation and logged-out swipes do not reveal edit', () => {
+  const {list, records, opened} = swipeList();
+  for (const [x,y] of [[225,100],[220,220],[140,200]]) {
+    list.onRowPointerDown(places[0], pointer(240,100));
+    list.onRowPointerUp(places[0], pointer(x,y));
+    assert.equal(list.revealedPlaceId,null);
+  }
+  list.onRowPointerDown(places[0], pointer(240,100));list.cancelRowGesture();list.onRowPointerUp(places[0],pointer(100,100));assert.equal(list.revealedPlaceId,null);
+  records.visible=false;list.onRowPointerDown(places[0],pointer(240,100));list.onRowPointerUp(places[0],pointer(100,100));list.editPlace(places[0]);assert.equal(list.revealedPlaceId,null);assert.deepEqual(opened,[]);
+});
+test('right swipe, keyboard dismissal, filters and logout close the revealed action', () => {
+  const {list,records}=swipeList();const key=key=>({key,preventDefault(){}});
+  list.onRowKeydown(places[0],key('ArrowLeft'));assert.equal(list.revealedPlaceId,1);
+  list.onRowPointerDown(places[0],pointer(100,100));list.onRowPointerUp(places[0],pointer(210,100));assert.equal(list.revealedPlaceId,null);
+  list.onRowKeydown(places[0],key('ArrowLeft'));list.onRowKeydown(places[0],key('Escape'));assert.equal(list.revealedPlaceId,null);
+  list.onRowKeydown(places[0],key('ArrowLeft'));list.placeMarkerService.setSearchFilter('臺北');assert.equal(list.revealedPlaceId,null);
+  list.onRowKeydown(places[0],key('ArrowLeft'));records.visible=false;records.changes$.next(1);assert.equal(list.revealedPlaceId,null);
+  list.ngOnDestroy();
+});
+
+test('assistive activation reveals Edit without opening a dialog and editing retains a focus target', () => {
+  const {list, records, opened}=swipeList();let focused=false;
+  list.revealEdit(places[0]);assert.equal(list.revealedPlaceId,1);assert.deepEqual(opened,[]);
+  list.editPlace(places[0],{focus(){focused=true;}});assert.equal(focused,true);assert.deepEqual(opened,[1]);
+  records.visible=false;list.revealEdit(places[1]);assert.equal(list.revealedPlaceId,null);
+});
+
+const { AppComponent } = load('src/app/app.component.ts');
+test('back-to-top appears after page scrolling and respects reduced-motion preference', () => {
+  const original=global.window,calls=[];
+  try {
+    global.window={scrollY:0,scrollTo:options=>calls.push(options),matchMedia:()=>({matches:false})};
+    const app=new AppComponent();assert.equal(app.showBackToTop,false);
+    window.scrollY=450;app.updateScrollPosition();assert.equal(app.showBackToTop,true);
+    app.scrollToTop();assert.deepEqual(calls.pop(),{top:0,behavior:'smooth'});
+    window.matchMedia=()=>({matches:true});app.scrollToTop();assert.deepEqual(calls.pop(),{top:0,behavior:'auto'});
+    window.scrollY=0;app.updateScrollPosition();assert.equal(app.showBackToTop,false);
+  } finally {global.window=original;}
+});
+
+const { PlaceService } = load('src/app/core/services/place.service.ts');
+test('personal categories update list and map filters together, restore original on logout, and reuse public data', () => {
+  const {BehaviorSubject}=require('rxjs');let category=null,visible=true,requests=0;
+  const changes$=new BehaviorSubject(0);
+  const records={changes$,record:id=>({category:visible&&id===1?category:null})};
+  const data=new PlaceService({get:()=>{requests++;return of(places);}},records);
+  const filters=new PlaceMarkerService(data),list=new PlaceListComponent(data,filters);list.ngOnInit();
+  const map={visible:[],getZoom:()=>10,getBounds:()=>({contains:()=>true})};filters.setCategoryFilter(['CAFE']);filters.loadMarkers(map);
+  assert.deepEqual(list.places.map(x=>x.id),[1,2,3]);
+  category='FOOD';changes$.next(1);
+  assert.deepEqual(list.places.map(x=>x.id),[2,3]);assert.deepEqual(map.visible,[[23,120],[25,121]]);
+  filters.setCategoryFilter(['FOOD']);assert.deepEqual(list.places.map(x=>x.id),[1]);assert.deepEqual(map.visible,[[24,120]]);
+  filters.loadMarkers(map);filters.loadMarkers(map);assert.equal(requests,1);assert.equal(changes$.observers.length,1);
+  visible=false;changes$.next(2);assert.deepEqual(list.places,[]);assert.deepEqual(map.visible,[]);
+  visible=true;category=null;changes$.next(3);filters.setCategoryFilter(['CAFE']);assert.deepEqual(list.places.map(x=>x.id),[1,2,3]);
+  filters.clearMarkers();list.ngOnDestroy();
 });

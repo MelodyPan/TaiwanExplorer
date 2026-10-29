@@ -2,8 +2,10 @@
   <app-header [filtersOpen]="filtersOpen" (filtersToggle)="filtersOpen = !filtersOpen"></app-header>
   <app-place-records></app-place-records>
   <div class="main-content">
+    <!-- 保留側欄實例與勾選狀態，收起時使用 hidden，不銷毀元件。 -->
     <app-sidebar id="explore-filters" [hidden]="!filtersOpen"></app-sidebar>
     <app-taiwan-map></app-taiwan-map>
     <app-place-list></app-place-list>
   </div>
 </div>
+<button *ngIf="showBackToTop" type="button" class="back-to-top" aria-label="回到頁面最上方" title="回到最上方" (click)="scrollToTop()">上</button>

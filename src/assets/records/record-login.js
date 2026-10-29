@@ -1,4 +1,4 @@
-// Only authorization is kept for this tab. Record contents remain in Drive.
+// 目前分頁只暫存授權資訊；地點正式資料仍在私人 Drive。
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.RecordLogin=factory();})(globalThis,function(){
  'use strict';
  // 只記錄 Google 實際回傳的正秒數與取得時間，不把 access token 混入顯示資訊。

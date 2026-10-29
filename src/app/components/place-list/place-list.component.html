@@ -1,6 +1,6 @@
 <aside class="place-list" aria-label="景點清單">
   <div class="place-list__header">
-    <div><p>CURATED PICKS</p><h2>{{ selectedCategory === 'ALL' && selectedCounties.length === 0 ? '推薦地點' : '篩選結果' }}</h2></div>
+    <div><p>CURATED PICKS</p><h2>{{ selectedCategories.length === 0 && selectedCounties.length === 0 ? '推薦地點' : '篩選結果' }}</h2></div>
     <span>{{ places.length }}</span>
   </div>
 

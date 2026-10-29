@@ -37,3 +37,50 @@ a {
     text-align: center;
     text-shadow: 0 1px 0 #ffffff, 1px 0 0 #ffffff, -1px 0 0 #ffffff;
 }
+.place-details-popup {
+    .leaflet-popup-content-wrapper { border: 1px solid #c9e8f8; border-radius: 10px; }
+    .leaflet-popup-content { margin: 16px; line-height: 1.6; }
+    .leaflet-popup-close-button { width: 32px; height: 32px; padding: 5px; color: #195c82; }
+}
+
+.place-info {
+    color: #18304a;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+
+    h2 { margin: 4px 16px 8px 0; color: #195c82; font-size: 18px; line-height: 1.4; }
+    p { margin: 8px 0; }
+    &__category { color: #2387b5; font-size: 12px; font-weight: 700; }
+    &__location { color: #41637a; }
+    &__description { white-space: pre-line; }
+    &__tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+
+        span { padding: 2px 8px; color: #195c82; background: #e2f5ff; border-radius: 12px; font-size: 12px; }
+    }
+    &__links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+
+        a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
+            padding: 8px 10px;
+            color: #195c82;
+            background: #eaf7ff;
+            border: 1px solid #c9e8f8;
+            border-radius: 6px;
+            font-weight: 700;
+            text-decoration: none;
+
+            &:hover { background: #d9f2ff; }
+            &:focus-visible { outline: 2px solid #195c82; outline-offset: 2px; }
+        }
+    }
+}

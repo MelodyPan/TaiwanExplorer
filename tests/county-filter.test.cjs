@@ -21,7 +21,10 @@ function load(filename) {
     if (name === '@angular/core') return { Injectable: () => value => value, Component: () => value => value };
     if (name === 'leaflet') return {
       divIcon: options => options,
+      point: (x, y) => ({ x, y }),
       marker: coordinates => ({
+        bindPopup(content, options) { this.popup = { getContent: () => content, options }; return this; },
+        getPopup() { return this.popup; },
         addTo(map) { map.visible.push(coordinates); this.map = map; return this; },
         remove() { this.map.visible.splice(this.map.visible.indexOf(coordinates), 1); }
       })
@@ -61,7 +64,7 @@ test('county selection intersects category and search, and clearing preserves th
   const { filters, list, map } = setup();
   assert.equal(typeof filters.setCountyFilter, 'function', 'county filtering must be available');
   filters.setCountyFilter(['臺中市', '臺南市']);
-  filters.setCategoryFilter('CAFE');
+  filters.setCategoryFilter(['CAFE']);
   assert.deepEqual(list.places.map(p => p.id), [1, 2]);
   filters.setSearchFilter('臺北');
   assert.deepEqual(list.places, []);
@@ -82,4 +85,73 @@ test('sidebar toggles counties independently and clearing restores all places', 
   sidebar.clearCounties();
   assert.equal(list.places.length, 4);
   assert.equal(sidebar.selectedCounties.length, 0);
+});
+
+
+test('multiple categories include either category in both list and map', () => {
+  const { filters, list, map } = setup();
+  const sidebar = new SidebarComponent(filters);
+  assert.equal(typeof sidebar.toggleCategory, 'function', 'category checkboxes must support multiple selections');
+  sidebar.toggleCategory('CAFE');
+  sidebar.toggleCategory('ATTRACTION');
+  assert.deepEqual(list.places.map(p => p.id), [1, 2, 3, 4]);
+  assert.deepEqual(map.visible, [[24, 120], [23, 120], [25, 121], [24.1, 120]]);
+  sidebar.toggleCategory('CAFE');
+  assert.deepEqual(list.places.map(p => p.id), [4]);
+  assert.deepEqual(map.visible, [[24.1, 120]]);
+  sidebar.toggleCategory('ATTRACTION');
+  assert.deepEqual(list.places.map(p => p.id), [1, 2, 3, 4]);
+});
+
+test('clearing categories preserves counties and search, and clearing counties preserves categories', () => {
+  const { filters, list, map } = setup();
+  const sidebar = new SidebarComponent(filters);
+  assert.equal(typeof sidebar.toggleCategory, 'function', 'category checkboxes must support multiple selections');
+  sidebar.toggleCounty('臺中市');
+  sidebar.toggleCounty('臺南市');
+  sidebar.toggleCategory('CAFE');
+  sidebar.toggleCategory('ATTRACTION');
+  assert.deepEqual(list.places.map(p => p.id), [1, 2, 4]);
+  assert.deepEqual(map.visible, [[24, 120], [23, 120], [24.1, 120]]);
+  filters.setSearchFilter('景點');
+  assert.deepEqual(list.places.map(p => p.id), [4]);
+  sidebar.clearCategories();
+  assert.equal(sidebar.selectedCategories.length, 0);
+  assert.deepEqual(list.places.map(p => p.id), [4]);
+  assert.deepEqual(map.visible, [[24.1, 120]]);
+  filters.setSearchFilter('');
+  sidebar.toggleCategory('CAFE');
+  sidebar.clearCounties();
+  assert.deepEqual(list.places.map(p => p.id), [1, 2, 3]);
+  assert.deepEqual(map.visible, [[24, 120], [23, 120], [25, 121]]);
+});
+
+
+test('place markers expose details and directions in their popup', () => {
+  const filters = new PlaceMarkerService({ getPlaces: () => of([]) });
+  const place = { ...places[0], address: '臺中市中區測試路 1 號', description: '巷弄裡的咖啡店。', tags: ['手沖', '甜點'], websiteUrl: 'https://cafe.example.tw/menu' };
+  const popup = filters.createMarker(place).getPopup();
+  assert.ok(popup, 'clicking a place marker must open a details popup');
+  const html = popup.getContent();
+  assert.ok(html.includes('臺中咖啡'));
+  assert.ok(html.includes('咖啡'));
+  assert.ok(html.includes('臺中市中區測試路 1 號'));
+  assert.ok(html.includes('巷弄裡的咖啡店。'));
+  assert.ok(html.includes('手沖'));
+  assert.ok(html.includes('https://cafe.example.tw/menu'));
+  assert.ok(html.includes('https://www.google.com/maps/search/?api=1'));
+});
+
+test('details popup handles missing fields and escapes text and unsafe links', () => {
+  const filters = new PlaceMarkerService({ getPlaces: () => of([]) });
+  const place = { ...places[0], name: '<img src=x onerror=alert(1)>', description: '<script>alert(1)</script>', websiteUrl: 'javascript:alert(1)', tags: ['<b>tag</b>'] };
+  const popup = filters.createMarker(place).getPopup();
+  assert.ok(popup, 'place markers must include a popup even when optional fields are absent');
+  const html = popup.getContent();
+  assert.ok(html.includes('&lt;img'));
+  assert.ok(html.includes('&lt;script&gt;'));
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('javascript:'));
+  assert.ok(!html.includes('undefined'));
+  assert.ok(html.includes('Google 地圖'));
 });

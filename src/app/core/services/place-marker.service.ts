@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import { BehaviorSubject } from 'rxjs';
 import { Place, PlaceCategory } from '../../models/place.model';
 import { PlaceService } from './place.service';
+import { createPlacePopupContent } from './place-popup-content';
 
 @Injectable({
   providedIn: 'root'
@@ -10,12 +11,12 @@ import { PlaceService } from './place.service';
 export class PlaceMarkerService {
   private markers: L.Marker[] = [];
   private map?: L.Map;
-  private selectedCategory = 'ALL';
+  private selectedCategories: PlaceCategory[] = [];
   private searchTerm = '';
   private selectedCounties: string[] = [];
   private readonly countyFilterSubject = new BehaviorSubject<readonly string[]>([]);
   readonly countyFilter$ = this.countyFilterSubject.asObservable();
-  private readonly categoryFilterSubject = new BehaviorSubject<string>('ALL');
+  private readonly categoryFilterSubject = new BehaviorSubject<readonly PlaceCategory[]>([]);
   private readonly searchFilterSubject = new BehaviorSubject<string>('');
   readonly categoryFilter$ = this.categoryFilterSubject.asObservable();
   readonly searchFilter$ = this.searchFilterSubject.asObservable();
@@ -41,14 +42,24 @@ export class PlaceMarkerService {
       iconAnchor: [15, 30],
     });
 
-    return L.marker([place.latitude, place.longitude], { icon });
+    return L.marker([place.latitude, place.longitude], {
+      icon,
+      title: place.name,
+      alt: place.name
+    }).bindPopup(createPlacePopupContent(place), {
+      className: 'place-details-popup',
+      minWidth: 220,
+      maxWidth: 300,
+      maxHeight: 320,
+      autoPanPadding: L.point(16, 16)
+    });
   }
 
   constructor(private placeService: PlaceService) {}
 
-  setCategoryFilter(category: string): void {
-    this.selectedCategory = category;
-    this.categoryFilterSubject.next(category);
+  setCategoryFilter(categories: readonly PlaceCategory[]): void {
+    this.selectedCategories = [...categories];
+    this.categoryFilterSubject.next([...this.selectedCategories]);
     if (this.map) {
       this.loadMarkers(this.map, true);
     }
@@ -81,7 +92,7 @@ export class PlaceMarkerService {
       this.clearMarkers();
       const bounds = map.getBounds();
       this.markers = places
-        .filter(place => this.selectedCategory === 'ALL' || place.category === this.selectedCategory)
+        .filter(place => this.selectedCategories.length === 0 || this.selectedCategories.includes(place.category))
         .filter(place => this.selectedCounties.length === 0 || this.selectedCounties.includes(place.county))
         .filter(place => this.matchesSearch(place))
         .filter(place => bounds.contains([place.latitude, place.longitude]))

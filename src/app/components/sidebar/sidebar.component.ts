@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { PlaceMarkerService } from '../../core/services/place-marker.service';
+import { PlaceCategory } from '../../models/place.model';
 
 @Component({
   selector: 'app-sidebar',
@@ -7,17 +8,15 @@ import { PlaceMarkerService } from '../../core/services/place-marker.service';
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
-  categories = [
-    { name: '全部', icon: '' },
-    { name: '🏞 景點', icon: 'attraction' },
-    { name: '🍜 美食', icon: 'food' },
-    { name: '☕ 咖啡', icon: 'cafe' },
-    { name: '🏨 住宿', icon: 'hotel' },
-    { name: '🏛 文化', icon: 'culture' },
-    { name: '🌲 自然', icon: 'nature' }
+  readonly categories: { value: PlaceCategory; name: string; icon: string }[] = [
+    { value: 'ATTRACTION', name: '景點', icon: '🏞' },
+    { value: 'FOOD', name: '美食', icon: '🍜' },
+    { value: 'CAFE', name: '咖啡', icon: '☕' },
+    { value: 'HOTEL', name: '住宿', icon: '🏨' },
+    { value: 'CULTURE', name: '文化', icon: '🏛' },
+    { value: 'NATURE', name: '自然', icon: '🌲' }
   ];
-
-  selectedCategory = 'ALL';
+  selectedCategories: PlaceCategory[] = [];
   readonly counties = [
     '基隆市', '臺北市', '新北市', '桃園市', '新竹市', '新竹縣',
     '苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣',
@@ -28,9 +27,16 @@ export class SidebarComponent {
 
   constructor(private placeMarkerService: PlaceMarkerService) {}
 
-  selectCategory(category: string): void {
-    this.selectedCategory = category;
-    this.placeMarkerService.setCategoryFilter(category);
+  toggleCategory(category: PlaceCategory): void {
+    this.selectedCategories = this.selectedCategories.includes(category)
+      ? this.selectedCategories.filter(selected => selected !== category)
+      : [...this.selectedCategories, category];
+    this.placeMarkerService.setCategoryFilter(this.selectedCategories);
+  }
+
+  clearCategories(): void {
+    this.selectedCategories = [];
+    this.placeMarkerService.setCategoryFilter([]);
   }
 
   toggleCounty(county: string): void {
@@ -43,9 +49,5 @@ export class SidebarComponent {
   clearCounties(): void {
     this.selectedCounties = [];
     this.placeMarkerService.setCountyFilter([]);
-  }
-
-  filterByCategory(category: string): void {
-    this.selectCategory(category);
   }
 }

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { combineLatest } from 'rxjs';
-import { Place } from '../../models/place.model';
+import { Place, PlaceCategory } from '../../models/place.model';
 import { PlaceMarkerService } from '../../core/services/place-marker.service';
 import { PlaceService } from '../../core/services/place.service';
 
@@ -11,7 +11,7 @@ import { PlaceService } from '../../core/services/place.service';
 })
 export class PlaceListComponent implements OnInit {
   places: Place[] = [];
-  selectedCategory = 'ALL';
+  selectedCategories: readonly PlaceCategory[] = [];
   selectedCounties: readonly string[] = [];
 
   constructor(
@@ -25,12 +25,12 @@ export class PlaceListComponent implements OnInit {
       this.placeMarkerService.categoryFilter$,
       this.placeMarkerService.searchFilter$,
       this.placeMarkerService.countyFilter$
-    ]).subscribe(([places, category, searchTerm, counties]) => {
+    ]).subscribe(([places, categories, searchTerm, counties]) => {
       this.selectedCounties = counties;
-      this.selectedCategory = category;
-      const categoryPlaces = category === 'ALL'
+      this.selectedCategories = categories;
+      const categoryPlaces = categories.length === 0
         ? places
-        : places.filter(place => place.category === category);
+        : places.filter(place => categories.includes(place.category));
       this.places = categoryPlaces
         .filter(place => counties.length === 0 || counties.includes(place.county))
         .filter(place => this.matchesSearch(place, searchTerm));

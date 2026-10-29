@@ -31,16 +31,12 @@
 }
 
 .logo__mark {
-	display: grid;
+	display: block;
 	width: 42px;
 	height: 42px;
-	place-items: center;
-	color: #ffffff;
-	background: #54b6e5;
-	border: 4px solid #d9f2ff;
+	object-fit: contain;
 	border-radius: 50%;
-	font-size: 12px;
-	font-weight: 700;
+	flex-shrink: 0;
 }
 
 .search {

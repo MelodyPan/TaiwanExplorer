@@ -90,6 +90,16 @@ export class PlaceListComponent implements OnInit, OnDestroy {
     this.records.open(place);
   }
 
+  personalSummary(id: number): string {
+    if (!this.records.visible) return '';
+    const record = this.records.record(id);
+    const parts: string[] = [];
+    if (record.rating !== null) parts.push('★ ' + record.rating + '/5');
+    // false 是明確的「沒去過」，只有 null 才代表尚未填寫而隱藏。
+    if (record.visited !== null) parts.push(record.visited ? '去過' : '沒去過');
+    return parts.join(' · ');
+  }
+
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); }
 
   private matchesSearch(place: Place, searchTerm: string): boolean {

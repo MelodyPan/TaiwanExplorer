@@ -21,7 +21,7 @@
     <div>
       <h3>{{ place.name }}</h3>
       <p>{{ place.county }} {{ place.district }}</p>
-      <p class="personal-summary" *ngIf="records.visible">{{ records.record(place.id).rating === null ? '未評分' : '★ ' + records.record(place.id).rating + '/5' }} · {{ records.record(place.id).visited === null ? '未設定是否去過' : records.record(place.id).visited ? '去過' : '沒去過' }}</p>
+      <p class="personal-summary" *ngIf="personalSummary(place.id) as summary">{{ summary }}</p>
     </div>
     <span class="place-list__tag">{{ place.category }}</span>
     </div>

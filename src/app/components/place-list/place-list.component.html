@@ -17,6 +17,7 @@
     <button *ngIf="records.visible && revealedPlaceId === place.id" type="button" class="edit-record"
       [attr.aria-label]="'編輯' + place.name" (pointerdown)="$event.stopPropagation()" (click)="editPlace(place, row)">編輯</button>
     <div class="place-list__item">
+    <button type="button" class="place-list__select" [attr.aria-label]="'在地圖查看' + place.name" (click)="selectPlace(place, $event)"></button>
     <span class="place-list__emoji" aria-hidden="true">{{ place.category === 'FOOD' ? '🍜' : place.category === 'ATTRACTION' ? '🏞' : place.category === 'NATURE' ? '🌲' : place.category === 'CULTURE' ? '🏛' : place.category === 'CAFE' ? '☕' : '🏨' }}</span>
     <div>
       <h3>{{ place.name }}</h3>

@@ -1,7 +1,7 @@
 import { PlaceRecordsService } from './place-records.service';
 import { Injectable } from '@angular/core';
 import * as L from 'leaflet';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { BehaviorSubject, Subject, Subscription } from 'rxjs';
 import { Place, PlaceCategory } from '../../models/place.model';
 import { PlaceService } from './place.service';
 import { createPlacePopupContent } from './place-popup-content';
@@ -10,6 +10,20 @@ import { createPlacePopupContent } from './place-popup-content';
   providedIn: 'root'
 })
 export class PlaceMarkerService {
+  private readonly placeSelectedSubject = new Subject<Place>();
+  private readonly routeRequestedSubject = new Subject<Place>();
+  readonly placeSelected$ = this.placeSelectedSubject.asObservable();
+  readonly routeRequested$ = this.routeRequestedSubject.asObservable();
+  selectPlace(place: Place): void { this.placeSelectedSubject.next(place); }
+  requestRoute(place: Place): void { this.routeRequestedSubject.next(place); }
+
+  focusPlace(place: Place): void {
+    if (!this.map) return;
+    // 禁用平移動畫，避免載入標記時讀到動畫前的舊邊界；zoomend 後再開啟指定彈窗。
+    this.map.setView([place.latitude, place.longitude], 15, {animate: false});
+    this.loadMarkers(this.map, true, place.id);
+  }
+
   private markers: L.Marker[] = [];
   private markerSubscription?: Subscription;
   private map?: L.Map;
@@ -55,9 +69,12 @@ export class PlaceMarkerService {
       maxHeight: 320,
       autoPanPadding: L.point(16, 16)
     });
-    if(this.records)marker.on('popupopen',()=>{
-      const button=marker.getPopup()?.getElement()?.querySelector<HTMLButtonElement>('.place-info__record');
-      if(button)button.onclick=()=>this.records.open(place);
+    marker.on('popupopen', () => {
+      const element = marker.getPopup()?.getElement();
+      const routeButton = element?.querySelector<HTMLButtonElement>('.place-info__route');
+      if (routeButton) routeButton.onclick = () => this.requestRoute(place);
+      const recordButton = element?.querySelector<HTMLButtonElement>('.place-info__record');
+      if (recordButton && this.records) recordButton.onclick = () => this.records.open(place);
     });
     return marker;
   }
@@ -88,7 +105,7 @@ export class PlaceMarkerService {
     }
   }
 
-  loadMarkers(map: L.Map, ignoreZoomLevel = false): void {
+  loadMarkers(map: L.Map, ignoreZoomLevel = false, openPlaceId?: number): void {
     // 資料流會隨私人類別變動而持續發值；每次平移／重載只能保留一組訂閱。
     this.markerSubscription?.unsubscribe();
     this.map = map;
@@ -106,7 +123,13 @@ export class PlaceMarkerService {
         .filter(place => this.selectedCounties.length === 0 || this.selectedCounties.includes(place.county))
         .filter(place => this.matchesSearch(place))
         .filter(place => bounds.contains([place.latitude, place.longitude]))
-        .map(place => this.createMarker(place).addTo(map));
+        .map(place => {
+          const marker = this.createMarker(place).addTo(map);
+          if (place.id === openPlaceId) marker.openPopup();
+          return marker;
+        });
+      // 只在本次選取時開啟，不因背景私人類別更新反覆重開彈窗。
+      openPlaceId = undefined;
     });
   }
 

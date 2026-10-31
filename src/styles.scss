@@ -101,3 +101,19 @@ a {
 }
 
 .place-info__record{display:block;width:100%;margin-top:12px;min-height:40px;padding:8px;border:1px solid #badfee;border-radius:7px;background:#e9f7ff;color:#195c82;cursor:pointer;font:inherit}
+
+.place-info__route {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 10px 0;
+  padding: 8px 12px;
+  border: 1px solid #2385af;
+  border-radius: 7px;
+  background: #2385af;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.place-info__route:focus-visible { outline: 2px solid #18304a; outline-offset: 2px; }

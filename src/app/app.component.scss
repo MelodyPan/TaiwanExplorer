@@ -76,3 +76,7 @@ app-sidebar[hidden] { display: none; }
   cursor: pointer;
 }
 .back-to-top:focus-visible { outline: 3px solid #18304a; outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  app-taiwan-map { height: auto; }
+}

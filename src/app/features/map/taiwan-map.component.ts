@@ -1,3 +1,6 @@
+import { Place } from '../../models/place.model';
+import { RoutingService } from '../../core/services/routing.service';
+import { formatRouteDistance, formatRouteDuration, RouteMode, RouteResult, validRoutePoint } from '../../core/utils/route';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
@@ -16,6 +19,21 @@ import { DEFAULT_MAP_VIEW, MAP_ZOOM } from 'src/app/core/constants/map.constants
   styleUrls: ['./taiwan-map.component.scss']
 })
 export class TaiwanMapComponent implements OnInit, OnDestroy {
+  selectedPlace: Place | null = null;
+  routeMode: RouteMode = 'driving';
+  routeResult: RouteResult | null = null;
+  routeOrigin: UserLocation | null = null;
+  routeLoading = false;
+  routeError = '';
+  routeRequested = false;
+  readonly routeModes: {value: RouteMode; label: string}[] = [
+    {value: 'driving', label: '開車'}, {value: 'scooter', label: '機車'}, {value: 'walking', label: '步行'}
+  ];
+  private readonly selectionSubscriptions = new Subscription();
+  private routeSubscription?: Subscription;
+  private routeLine?: L.Polyline;
+  readonly formatRouteDistance = formatRouteDistance;
+  readonly formatRouteDuration = formatRouteDuration;
   currentLocation: UserLocation | null = null;
   locationLoading = false;
   locationError = '';
@@ -41,16 +59,79 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
     private mapDataService: MapDataService,
     private placeMarkerService: PlaceMarkerService,
     private weatherService: WeatherService,
-    private locationService: LocationService
+    private locationService: LocationService,
+    private routingService: RoutingService
   ) {}
 
   ngOnInit(): void {
     this.initMap();
     this.loadGeoJSON();
     this.startLocation();
+    this.selectionSubscriptions.add(this.placeMarkerService.placeSelected$.subscribe(place => this.showPlace(place)));
+    this.selectionSubscriptions.add(this.placeMarkerService.routeRequested$.subscribe(place => {
+      if (this.selectedPlace?.id !== place.id) this.showPlace(place);
+      this.planRoute();
+    }));
+  }
+
+  showPlace(place: Place): void {
+    if (!validRoutePoint(place)) return;
+    this.clearRoute();
+    this.selectedPlace = place;
+    this.placeMarkerService.focusPlace(place);
+    const container = this.map.getContainer();
+    const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    container.scrollIntoView({behavior: reducedMotion ? 'auto' : 'smooth', block: 'center'});
+    container.focus({preventScroll: true});
+  }
+
+  changeRouteMode(mode: RouteMode): void {
+    if (!this.routeModes.some(option => option.value === mode) || this.routeMode === mode) return;
+    this.routeMode = mode;
+    if (this.routeRequested) this.planRoute();
+  }
+
+  planRoute(): void {
+    this.clearRoute();
+    if (!this.selectedPlace) return;
+    this.routeRequested = true;
+    if (!validRoutePoint(this.currentLocation)) {
+      this.routeError = '請先取得有效定位，再規劃路線。';
+      return;
+    }
+    // 起點採本次按下按鈕時的快照；後續 GPS 只更新藍點，不能偷偷重送位置或改動路線。
+    this.routeOrigin = {...this.currentLocation};
+    this.routeLoading = true;
+    this.map.closePopup();
+    this.routeSubscription = this.routingService.route(this.routeOrigin, this.selectedPlace, this.routeMode).subscribe({
+      next: result => {
+        this.routeResult = result;
+        this.routeLoading = false;
+        this.routeLine = L.polyline(result.coordinates, {color: '#176bb7', weight: 6, opacity: 0.9}).addTo(this.map);
+        this.map.fitBounds(this.routeLine.getBounds(), {padding: [28, 28], maxZoom: 16, animate: false});
+      },
+      error: () => {
+        this.routeLoading = false;
+        this.routeError = '目前無法計算此路線，請稍後重試或切換交通方式。';
+      }
+    });
+  }
+
+  clearRoute(): void {
+    // 切換目的地／交通方式或清除時先取消，確保舊 HTTP 回覆不會覆寫新選擇。
+    this.routeSubscription?.unsubscribe();
+    this.routeLine?.remove();
+    this.routeLine = undefined;
+    this.routeResult = null;
+    this.routeOrigin = null;
+    this.routeLoading = false;
+    this.routeError = '';
+    this.routeRequested = false;
   }
 
   ngOnDestroy(): void {
+    this.clearRoute();
+    this.selectionSubscriptions.unsubscribe();
     this.locationSubscription?.unsubscribe();
     this.geoJsonSubscription?.unsubscribe();
     this.mapResizeObserver?.disconnect();
@@ -89,7 +170,7 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
         this.locationError = '';
         this.updateLocationMarker(location);
         // 只有初次有效定位自動移鏡頭，後續更新藍點不把使用者拖開的地圖拉回。
-        if (firstPosition) this.centerOnLocation(location, false);
+        if (firstPosition && !this.selectedPlace) this.centerOnLocation(location, false);
       },
       error: () => {
         this.locationLoading = false;
@@ -99,9 +180,13 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
         this.accuracyCircle?.remove();
         this.accuracyCircle = undefined;
         // 預設站點只當地圖中心，不可發布成有效定位或畫成使用者藍點。
-        this.locationError = '無法定位，已顯示預設中心：台中火車站。可重新定位。';
-        this.map.setView(DEFAULT_MAP_VIEW.center, DEFAULT_MAP_VIEW.zoom);
-        this.placeMarkerService.loadMarkers(this.map);
+        this.clearRoute();
+        this.locationError = this.selectedPlace ? '無法定位，可重新定位後規劃路線。'
+          : '無法定位，已顯示預設中心：台中火車站。可重新定位。';
+        if (!this.selectedPlace) {
+          this.map.setView(DEFAULT_MAP_VIEW.center, DEFAULT_MAP_VIEW.zoom);
+          this.placeMarkerService.loadMarkers(this.map);
+        }
       }
     });
   }

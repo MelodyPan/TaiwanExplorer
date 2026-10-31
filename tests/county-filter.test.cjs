@@ -24,7 +24,14 @@ function load(filename) {
     if (name === 'leaflet') return {
       divIcon: options => options,
       point: (x, y) => ({ x, y }),
+      polyline: coordinates => ({
+        addTo(map) {this.map=map;map.routeCoordinates=coordinates;return this;},
+        getBounds(){return coordinates;},
+        remove(){this.map.routeCoordinates=null;}
+      }),
       marker: coordinates => ({
+        on() {return this;},
+        openPopup() {this.opened=true;return this;},
         bindPopup(content, options) { this.popup = { getContent: () => content, options }; return this; },
         getPopup() { return this.popup; },
         bindTooltip(content) { this.tooltip = content; return this; },
@@ -409,4 +416,43 @@ test('repeated or nearby positioning fixes do not interrupt an unchanged row swi
  list.onRowKeydown(places[0],{key:'Escape',preventDefault(){}});list.onRowPointerDown(places[0],pointer(240,100));
  currentLocation$.next({latitude:24.0001,longitude:120,source:'device'});list.onRowPointerUp(places[0],pointer(120,100));assert.equal(list.revealedPlaceId,1);
  filters.setSearchFilter('臺北');assert.equal(list.revealedPlaceId,null);list.ngOnDestroy();
+});
+
+test('tapping a place selects it while swipe-generated clicks and revealed actions do not navigate',()=>{
+ const {list}=swipeList();const selected=[];list.placeMarkerService.selectPlace=place=>selected.push(place.id);
+ list.selectPlace(places[0],{detail:1});assert.deepEqual(selected,[1]);
+ list.onRowPointerDown(places[0],pointer(240,100));list.onRowPointerUp(places[0],pointer(120,100));
+ list.selectPlace(places[0],{detail:1});assert.deepEqual(selected,[1]);assert.equal(list.revealedPlaceId,1);
+ list.selectPlace(places[0],{detail:0});assert.equal(list.revealedPlaceId,null);assert.deepEqual(selected,[1]);
+ list.selectPlace(places[0],{detail:0});assert.deepEqual(selected,[1,1]);
+ list.records.visible=false;list.onRowPointerDown(places[0],pointer(240,100));list.onRowPointerUp(places[0],pointer(200,180));
+ list.selectPlace(places[0],{detail:1});assert.deepEqual(selected,[1,1]);
+});
+test('selecting a place centers its marker and opens its popup after markers reload',()=>{
+ const {filters,map}=setup();let center;map.setView=(coords,zoom)=>{center={coords,zoom};return map;};
+ const created=[],original=filters.createMarker.bind(filters);
+ filters.createMarker=place=>{const marker=original(place);marker.openPopup=()=>{created.push(place.id);return marker;};return marker;};
+ filters.focusPlace(places[2]);assert.deepEqual(center,{coords:[25,121],zoom:15});assert.deepEqual(created,[3]);
+});
+test('route events stay inside the website and popup provides a planning action',()=>{
+ const filters=new PlaceMarkerService({getPlaces:()=>of([])}),selected=[],routes=[];
+ filters.placeSelected$.subscribe(place=>selected.push(place.id));filters.routeRequested$.subscribe(place=>routes.push(place.id));
+ filters.selectPlace(places[0]);filters.requestRoute(places[1]);
+ assert.deepEqual(selected,[1]);assert.deepEqual(routes,[2]);
+ const html=filters.createMarker(places[0]).getPopup().getContent();
+ assert.match(html,/class="place-info__route"/);assert.ok(html.includes('規劃路線'));
+});
+test('onsite routing clears old lines, cancels stale mode requests and never routes from the fallback station',()=>{
+ const {Subject}=require('rxjs'),{TaiwanMapComponent}=load('src/app/features/map/taiwan-map.component.ts');
+ const requests=[],routing={route(origin,destination,mode){const subject=new Subject();requests.push({origin,destination,mode,subject});return subject;}};
+ const component=new TaiwanMapComponent({}, {loadMarkers(){},focusPlace(){}}, {}, {},routing);
+ component.map={visible:[],fitBounds(){},closePopup(){},getContainer(){return {scrollIntoView(){},focus(){}};}};
+ component.selectedPlace=places[0];component.planRoute();assert.equal(requests.length,0);assert.ok(component.routeError.includes('定位'));
+ component.currentLocation={latitude:24,longitude:120,source:'ip'};component.planRoute();assert.equal(requests.length,1);assert.equal(component.routeLoading,true);
+ component.changeRouteMode('scooter');assert.equal(requests[0].subject.observers.length,0);assert.equal(requests[1].mode,'scooter');
+ requests[0].subject.next({coordinates:[[24,120],[25,121]],distanceMeters:999,durationSeconds:999});assert.equal(component.routeResult,null);
+ requests[1].subject.next({coordinates:[[24,120],[25,121]],distanceMeters:1000,durationSeconds:120});assert.equal(component.routeResult.distanceMeters,1000);assert.equal(component.routeLoading,false);
+ component.changeRouteMode('walking');assert.equal(component.routeResult,null);assert.equal(requests[2].mode,'walking');
+ requests[2].subject.error(new Error('unavailable'));assert.equal(component.routeResult,null);assert.equal(component.routeLoading,false);assert.ok(component.routeError);
+ component.clearRoute();assert.equal(component.routeResult,null);assert.equal(component.routeError,'');assert.equal(component.routeRequested,false);
 });

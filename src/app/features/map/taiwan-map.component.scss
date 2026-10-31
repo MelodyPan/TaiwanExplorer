@@ -59,3 +59,36 @@
 
   &--error { color: #98431e; }
 }
+
+.route-panel {
+  flex: 0 0 auto;
+  max-height: 42vh;
+  overflow-y: auto;
+  padding: 14px;
+  border-top: 1px solid #c9e8f8;
+  background: #f9fdff;
+  color: #244f69;
+  font-size: 13px;
+  line-height: 1.5;
+  h2 { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+  p { margin: 9px 0; }
+  button { min-height: 44px; padding: 8px 12px; border: 1px solid #b6dced; border-radius: 7px; color: #195c82; background: #eaf7fd; font: inherit; cursor: pointer; }
+  button:focus-visible, a:focus-visible { outline: 2px solid #195c82; outline-offset: 2px; }
+  button:disabled { opacity: .65; cursor: wait; }
+  &__heading, &__modes, &__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  &__heading { justify-content: space-between; margin-bottom: 12px; }
+  &__heading h2 { flex: 1; }
+  &__modes button { flex: 1; }
+  &__modes button[aria-pressed="true"], &__actions button:first-child { color: white; background: #2385af; border-color: #2385af; }
+  &__summary { font-size: 20px; font-weight: 700; }
+  &__notice, &__error { color: #8a4a13; }
+  &__note, &__credits { font-size: 11px; color: #526c7c; }
+  a { color: #195c82; }
+}
+.map-viewport { min-height: 200px; }
+.location-status { flex-shrink: 0; }
+@media (max-width: 900px) {
+  :host { height: auto; }
+  .map-viewport { flex: 0 0 55vh; min-height: 300px; }
+  .route-panel { max-height: none; }
+}

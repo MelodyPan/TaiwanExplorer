@@ -11,3 +11,27 @@
   </div>
 </div>
 <p class="location-status" [class.location-status--error]="locationError" role="status" aria-live="polite">{{ locationStatus }}</p>
+
+<section *ngIf="selectedPlace" class="route-panel" aria-label="站內路線規劃">
+  <div class="route-panel__heading"><h2>前往 {{ selectedPlace.name }}</h2><button type="button" (click)="clearRoute(); selectedPlace = null" aria-label="關閉路線規劃">關閉</button></div>
+  <div class="route-panel__modes" role="group" aria-label="交通方式">
+    <button *ngFor="let mode of routeModes" type="button" [attr.aria-pressed]="routeMode === mode.value" (click)="changeRouteMode(mode.value)">{{ mode.label }}</button>
+  </div>
+  <p *ngIf="!routeRequested">從目前位置出發，直接在地圖查看路線。</p>
+  <p *ngIf="routeOrigin?.source === 'ip'" class="route-panel__notice">起點為 IP 推估位置，路程與時間可能有較大誤差。</p>
+  <div role="status" aria-live="polite" [attr.aria-busy]="routeLoading">
+    <p *ngIf="routeLoading">正在規劃路線…</p>
+    <p *ngIf="routeError" class="route-panel__error">{{ routeError }}</p>
+    <p *ngIf="routeResult" class="route-panel__summary">約 {{ formatRouteDuration(routeResult.durationSeconds) }} · {{ formatRouteDistance(routeResult.distanceMeters) }}</p>
+  </div>
+  <div class="route-panel__actions">
+    <button type="button" [disabled]="routeLoading" (click)="planRoute()">{{ routeLoading ? '計算中…' : routeError ? '重試規劃路線' : routeResult ? '依目前位置重新規劃' : '規劃路線' }}</button>
+    <button *ngIf="routeRequested" type="button" (click)="clearRoute()">清除路線</button>
+  </div>
+  <p *ngIf="routeMode === 'scooter'" class="route-panel__note">機車為一般機車模式，非重機專用路線；請依現場標誌通行。</p>
+  <p class="route-panel__note">預估時間不含即時路況。按規劃或切換已規劃的交通方式，會將起終點座標傳給免費路線服務；起點以規劃時的定位為準。</p>
+  <p class="route-panel__credits">路線：<a href="https://valhalla.github.io/valhalla/" target="_blank" rel="noopener noreferrer">Valhalla</a> /
+    <a href="https://www.fossgis.de/" target="_blank" rel="noopener noreferrer">FOSSGIS</a> ·
+    © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> ·
+    <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">回報地圖問題</a></p>
+</section>

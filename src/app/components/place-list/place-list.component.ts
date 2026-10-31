@@ -20,6 +20,7 @@ export class PlaceListComponent implements OnInit, OnDestroy {
   selectedCategories: readonly PlaceCategory[] = [];
   selectedCounties: readonly string[] = [];
   private appliedSearchTerm = '';
+  private suppressSelection = false;
 
   constructor(
     private placeService: PlaceService,
@@ -68,7 +69,8 @@ export class PlaceListComponent implements OnInit, OnDestroy {
 
   onRowPointerDown(place: Place, event: PointerEvent): void {
     this.gesture = null;
-    if (!this.records.visible || event.button !== 0 || event.isPrimary === false) return;
+    this.suppressSelection = false;
+    if (event.button !== 0 || event.isPrimary === false) return;
     if (this.revealedPlaceId !== place.id) this.revealedPlaceId = null;
     this.gesture = {placeId:place.id, pointerId:event.pointerId, x:event.clientX, y:event.clientY};
   }
@@ -77,14 +79,23 @@ export class PlaceListComponent implements OnInit, OnDestroy {
     const start = this.gesture;
     this.gesture = null;
     // 必須是同一筆資料與同一支指標，避免多指或跨列放開誤觸。
-    if (!this.records.visible || !start || start.placeId !== place.id || start.pointerId !== event.pointerId) return;
+    if (!start || start.placeId !== place.id || start.pointerId !== event.pointerId) return;
     const dx = event.clientX - start.x, dy = event.clientY - start.y;
+    this.suppressSelection = Math.abs(dx) > 10 || Math.abs(dy) > 10;
+    if (!this.records.visible) return;
     // 保留瀏覽器原生垂直捲動：至少橫移 48px，且垂直位移不得超過水平的 65%。
     if (Math.abs(dx) < 48 || Math.abs(dy) > Math.abs(dx) * 0.65) return;
     this.revealedPlaceId = dx < 0 ? place.id : null;
   }
 
-  cancelRowGesture(): void { this.gesture = null; }
+  cancelRowGesture(): void { this.gesture = null; this.suppressSelection = true; }
+
+  selectPlace(place: Place, event: MouseEvent): void {
+    // 手勢結束後瀏覽器仍可能送出 click；左右滑及上下捲動不能誤當點選。
+    if (event.detail !== 0 && this.suppressSelection) { this.suppressSelection = false; return; }
+    if (this.revealedPlaceId !== null) { this.revealedPlaceId = null; return; }
+    this.placeMarkerService.selectPlace(place);
+  }
 
   onRowKeydown(place: Place, event: KeyboardEvent): void {
     // 編輯按鈕內的按鍵不再交給資料列處理，避免子控制項的鍵盤操作被攔截。

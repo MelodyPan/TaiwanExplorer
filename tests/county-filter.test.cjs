@@ -366,3 +366,47 @@ test('personal categories update list and map filters together, restore original
   visible=true;category=null;changes$.next(3);filters.setCategoryFilter(['CAFE']);assert.deepEqual(list.places.map(x=>x.id),[1,2,3]);
   filters.clearMarkers();list.ngOnDestroy();
 });
+
+const { sortPlacesByDistance } = load('src/app/core/utils/place-distance.ts');
+test('distance sorting is nearest first, stable for ties, and never mutates public place order', () => {
+  const origin={latitude:24,longitude:120,source:'device'};
+  assert.deepEqual(sortPlacesByDistance(places,origin).map(p=>p.id),[1,4,2,3]);
+  assert.deepEqual(places.map(p=>p.id),[1,2,3,4]);
+  const tied=[{...places[0],id:9},{...places[0],id:8}];assert.deepEqual(sortPlacesByDistance(tied,origin).map(p=>p.id),[9,8]);
+  const invalid={...places[0],id:7,latitude:NaN};assert.equal(sortPlacesByDistance([invalid,...places],origin).at(-1).id,7);
+  assert.deepEqual(sortPlacesByDistance(places,null).map(p=>p.id),[1,2,3,4]);
+  assert.deepEqual(sortPlacesByDistance(places,{...origin,latitude:0,longitude:0}).map(p=>p.id),[1,2,3,4]);
+});
+test('list applies nearest-first after filtering and reacts to GPS/IP updates or lost location', () => {
+  const {BehaviorSubject}=require('rxjs'),currentLocation$=new BehaviorSubject(null);
+  const data={getPlaces:()=>of(places)},filters=new PlaceMarkerService(data);
+  const list=new PlaceListComponent(data,filters,undefined,{currentLocation$});list.ngOnInit();
+  assert.deepEqual(list.places.map(p=>p.id),[1,2,3,4]);
+  currentLocation$.next({latitude:24,longitude:120,source:'device'});assert.deepEqual(list.places.map(p=>p.id),[1,4,2,3]);
+  filters.setCategoryFilter(['CAFE']);assert.deepEqual(list.places.map(p=>p.id),[1,2,3]);
+  currentLocation$.next({latitude:25,longitude:121,source:'ip'});assert.equal(list.places[0].id,3);
+  filters.setCountyFilter(['臺中市','臺南市']);assert.deepEqual(list.places.map(p=>p.id),[1,2]);
+  filters.setCountyFilter([]);currentLocation$.next(null);assert.deepEqual(list.places.map(p=>p.id),[1,2,3]);
+  list.ngOnDestroy();assert.equal(currentLocation$.observers.length,0);
+});
+
+test('shared positioning state reuses the map request, retains completed IP fix and clears invalid results', () => {
+  const LocationService=getLocationService();let requests=0,response={latitude:24,longitude:120};
+  const service=new LocationService({get:()=>{requests++;return of(response);}},{defaultView:{navigator:{userAgent:'Windows'}}});
+  const seen=[],a=service.currentLocation$.subscribe(value=>seen.push(value));
+  const b=service.currentLocation$.subscribe(()=>{});assert.equal(requests,0);assert.equal(seen.at(-1),null);
+  service.watchLocation().subscribe();assert.equal(requests,1);assert.equal(seen.at(-1).latitude,24);
+  response={latitude:0,longitude:0};service.watchLocation().subscribe({error(){}});assert.equal(seen.at(-1),null);assert.equal(requests,2);
+  a.unsubscribe();b.unsubscribe();
+});
+
+test('repeated or nearby positioning fixes do not interrupt an unchanged row swipe or edit action',()=>{
+ const {BehaviorSubject}=require('rxjs'),currentLocation$=new BehaviorSubject({latitude:24,longitude:120,source:'device'});
+ const records={visible:true,changes$:new BehaviorSubject(0),open(){}};
+ const data={getPlaces:()=>of(places)},filters=new PlaceMarkerService(data);
+ const list=new PlaceListComponent(data,filters,records,{currentLocation$});list.ngOnInit();
+ list.revealEdit(places[0]);currentLocation$.next({latitude:24.0001,longitude:120,source:'device'});assert.equal(list.revealedPlaceId,1);
+ list.onRowKeydown(places[0],{key:'Escape',preventDefault(){}});list.onRowPointerDown(places[0],pointer(240,100));
+ currentLocation$.next({latitude:24.0001,longitude:120,source:'device'});list.onRowPointerUp(places[0],pointer(120,100));assert.equal(list.revealedPlaceId,1);
+ filters.setSearchFilter('臺北');assert.equal(list.revealedPlaceId,null);list.ngOnDestroy();
+});

@@ -1,8 +1,8 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map, timeout } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, map, tap, timeout } from 'rxjs/operators';
 
 export interface UserLocation {
   latitude: number;
@@ -13,9 +13,19 @@ export interface UserLocation {
 
 @Injectable({ providedIn: 'root' })
 export class LocationService {
+  private readonly currentLocationSubject = new BehaviorSubject<UserLocation | null>(null);
+  readonly currentLocation$ = this.currentLocationSubject.asObservable();
   constructor(private http: HttpClient, @Inject(DOCUMENT) private document: Document) {}
 
   watchLocation(): Observable<UserLocation> {
+    // 由既有地圖定位請求發布結果，清單只訂閱記憶體狀態，不重複啟動 GPS／IP 請求。
+    return this.requestLocation().pipe(tap({
+      next: location => this.currentLocationSubject.next(location),
+      error: () => this.currentLocationSubject.next(null)
+    }));
+  }
+
+  private requestLocation(): Observable<UserLocation> {
     const navigator = this.document.defaultView?.navigator;
     if (!navigator || !this.isMobile(navigator) || !navigator.geolocation) {
       return this.getIpLocation();

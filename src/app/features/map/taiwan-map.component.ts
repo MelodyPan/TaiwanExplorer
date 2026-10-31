@@ -86,7 +86,6 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
         const firstPosition = this.currentLocation === null;
         this.currentLocation = location;
         this.locationLoading = false;
-        // 預設站點只當地圖中心，前面已移除藍點，不能讓使用者誤認為本人位置。
         this.locationError = '';
         this.updateLocationMarker(location);
         // 只有初次有效定位自動移鏡頭，後續更新藍點不把使用者拖開的地圖拉回。
@@ -99,6 +98,7 @@ export class TaiwanMapComponent implements OnInit, OnDestroy {
         this.locationMarker = undefined;
         this.accuracyCircle?.remove();
         this.accuracyCircle = undefined;
+        // 預設站點只當地圖中心，不可發布成有效定位或畫成使用者藍點。
         this.locationError = '無法定位，已顯示預設中心：台中火車站。可重新定位。';
         this.map.setView(DEFAULT_MAP_VIEW.center, DEFAULT_MAP_VIEW.zoom);
         this.placeMarkerService.loadMarkers(this.map);

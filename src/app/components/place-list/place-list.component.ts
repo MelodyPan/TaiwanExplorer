@@ -1,6 +1,8 @@
 import { PlaceRecordsService } from '../../core/services/place-records.service';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { combineLatest, Subscription } from 'rxjs';
+import { LocationService } from '../../core/services/location.service';
+import { sortPlacesByDistance } from '../../core/utils/place-distance';
+import { combineLatest, of, Subscription } from 'rxjs';
 import { Place, PlaceCategory } from '../../models/place.model';
 import { PlaceMarkerService } from '../../core/services/place-marker.service';
 import { PlaceService } from '../../core/services/place.service';
@@ -17,11 +19,13 @@ export class PlaceListComponent implements OnInit, OnDestroy {
   places: Place[] = [];
   selectedCategories: readonly PlaceCategory[] = [];
   selectedCounties: readonly string[] = [];
+  private appliedSearchTerm = '';
 
   constructor(
     private placeService: PlaceService,
     private placeMarkerService: PlaceMarkerService,
-    public records: PlaceRecordsService
+    public records: PlaceRecordsService,
+    private locationService?: LocationService
   ) {}
 
   ngOnInit(): void {
@@ -29,18 +33,33 @@ export class PlaceListComponent implements OnInit, OnDestroy {
       this.placeService.getPlaces(),
       this.placeMarkerService.categoryFilter$,
       this.placeMarkerService.searchFilter$,
-      this.placeMarkerService.countyFilter$
-    ]).subscribe(([places, categories, searchTerm, counties]) => {
-      this.revealedPlaceId = null;
-      this.gesture = null;
-      this.selectedCounties = counties;
-      this.selectedCategories = categories;
+      this.placeMarkerService.countyFilter$,
+      this.locationService?.currentLocation$ || of(null)
+    ]).subscribe(([places, categories, searchTerm, counties, position]) => {
+      const filtersChanged = searchTerm !== this.appliedSearchTerm
+        || categories.length !== this.selectedCategories.length
+        || categories.some((category, index) => category !== this.selectedCategories[index])
+        || counties.length !== this.selectedCounties.length
+        || counties.some((county, index) => county !== this.selectedCounties[index]);
       const categoryPlaces = categories.length === 0
         ? places
         : places.filter(place => categories.includes(place.category));
-      this.places = categoryPlaces
+      // 先套用原有篩選，再依最新有效定位排序；IP 位置同樣適用但距離僅為推估。
+      const sortedPlaces = sortPlacesByDistance(categoryPlaces
         .filter(place => counties.length === 0 || counties.includes(place.county))
-        .filter(place => this.matchesSearch(place, searchTerm));
+        .filter(place => this.matchesSearch(place, searchTerm)), position);
+      const orderChanged = sortedPlaces.length !== this.places.length
+        || sortedPlaces.some((place, index) => place.id !== this.places[index].id);
+      // GPS 常連續回報相近位置；順序沒變時保留左滑操作，避免編輯按鈕忽然消失。
+      // 若篩選或順序真的改變，才取消舊手勢，防止列已移動卻在原座標誤觸。
+      if (filtersChanged || orderChanged) {
+        this.revealedPlaceId = null;
+        this.gesture = null;
+      }
+      this.selectedCounties = counties;
+      this.selectedCategories = categories;
+      this.appliedSearchTerm = searchTerm;
+      this.places = sortedPlaces;
     }));
     if (this.records) this.subscriptions.add(this.records.changes$.subscribe(() => {
       if (!this.records.visible) { this.revealedPlaceId = null; this.gesture = null; }
